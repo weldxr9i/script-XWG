@@ -1,0 +1,610 @@
+if not game:IsLoaded() then game.Loaded:Wait() end
+
+local Players          = game:GetService("Players")
+local TweenService     = game:GetService("TweenService")
+local RunService       = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui          = game:GetService("CoreGui")
+local Workspace        = game:GetService("Workspace")
+local VirtualUser      = game:GetService("VirtualUser")
+local Debris           = game:GetService("Debris")
+local TextChatService  = game:GetService("TextChatService")
+local LocalPlayer      = Players.LocalPlayer
+
+local CONFIG = {
+    MY_NAME    = "KAi",
+    CLAN_NAME  = "WAR GODS",
+    BG_IMAGE   = "rbxassetid://125086374911002",
+    ACCENT     = Color3.fromRGB(148, 0, 211),
+    ACCENT_2   = Color3.fromRGB(255, 60, 200),
+}
+
+local rgb = Color3.fromRGB
+local function kp(t, c) return ColorSequenceKeypoint.new(t, c) end
+
+local function getGuiParent()
+    local ok, res = pcall(function() return gethui and gethui() end)
+    if ok and res then return res end
+    local ok2 = pcall(function() return CoreGui.Name end)
+    if ok2 then return CoreGui end
+    return LocalPlayer:WaitForChild("PlayerGui")
+end 
+local GUI_PARENT = getGuiParent()
+
+if GUI_PARENT:FindFirstChild("WG_LowLag_Hub") then pcall(function() GUI_PARENT["WG_LowLag_Hub"]:Destroy() end) end
+if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then pcall(function() CoreGui["WG_AntiAFK_Gui"]:Destroy() end) end
+if CoreGui:FindFirstChild("WG_Premium_Tracker") then pcall(function() CoreGui["WG_Premium_Tracker"]:Destroy() end) end
+
+local function new(class, props, children)
+    local o = Instance.new(class)
+    for k, v in pairs(props or {}) do if k ~= "Parent" then o[k] = v end end
+    for _, c in ipairs(children or {}) do c.Parent = o end
+    if props and props.Parent then o.Parent = props.Parent end
+    return o
+end
+
+local function corner(r) return new("UICorner", { CornerRadius = r or UDim.new(1, 0) }) end
+
+local function tween(obj, t, props, style, dir)
+    local tw = TweenService:Create(obj, TweenInfo.new(t, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)
+    tw:Play()
+    return tw
+end
+
+local function loopGradient(g, t)
+    g.Offset = Vector2.new(-1, 0)
+    TweenService:Create(g, TweenInfo.new(t, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), { Offset = Vector2.new(1, 0) }):Play()
+end
+
+function makeDraggable(frame)
+    local dragging, startPos, startFramePos
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging, startPos, startFramePos = true, input.Position, frame.Position
+            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local d = input.Position - startPos
+            frame.Position = UDim2.new(startFramePos.X.Scale, startFramePos.X.Offset + d.X, startFramePos.Y.Scale, startFramePos.Y.Offset + d.Y)
+        end
+    end)
+end
+
+local Config = {PurgeAvatars = false, FreezeWeather = false, AntiExplosions = false, BaseplateOnly = false, UltimateBoost = false, ClearEffects = false, AntiSit = false, AntiFling = false, Engine100FPS = false, AntiAFK = false, TrackerEnabled = false, MapOptimizeActive = false, SpeedBoost = false, BHOptimize = false}
+local ServerDatabase, UIEntries = {}, {}
+local currentSearchText = ""
+
+local function FormatTime(s)
+    return string.format("%02d:%02d:%02d", math.floor(s/3600), math.floor((s%3600)/60), s%60)
+end
+
+local function StripCharacter(char)
+    if not char or not Config.PurgeAvatars or Players:GetPlayerFromCharacter(char) == Players.LocalPlayer then return end
+    local function cleanObj(obj)
+        if obj:IsA("Accessory") or obj:IsA("Shirt") or obj:IsA("Pants") or obj:IsA("ShirtGraphic") or obj:IsA("CharacterMesh") or obj:IsA("BodyColors") then pcall(function() obj:Destroy() end)
+        elseif obj:IsA("BasePart") then obj.Material, obj.CastShadow, obj.Reflectance = Enum.Material.SmoothPlastic, false, 0 
+        elseif obj:IsA("Animator") or obj:IsA("AnimationTrack") then pcall(function() obj:Stop() end) end
+    end
+    for _, obj in ipairs(char:GetDescendants()) do cleanObj(obj) end
+    local childConn
+    childConn = char.DescendantAdded:Connect(function(desc) if not Config.PurgeAvatars or not char:IsDescendantOf(Workspace) then childConn:Disconnect() return end cleanObj(desc) end)
+    if char:FindFirstChildOfClass("Humanoid") then char:FindFirstChildOfClass("Humanoid").DisplayDistanceType = Enum.HumanoidDisplayDistanceType.All end
+end
+
+local function ExtremeSkyClean()
+    local targets = {game:GetService("Lighting"), Workspace}
+    if Workspace.CurrentCamera then table.insert(targets, Workspace.CurrentCamera) end
+    for i = 1, #targets do
+        local container = targets[i] local children = container:GetChildren()
+        for j = 1, #children do
+            local obj = children[j]
+            if obj:IsA("Atmosphere") or obj:IsA("Sky") or obj:IsA("Clouds") or obj:IsA("BlurEffect") or obj:IsA("SunRaysEffect") or obj:IsA("BloomEffect") then pcall(function() obj:Destroy() end) end
+        end
+    end
+end
+
+local function OptimizeWorldObject(obj)
+    if not obj then return end
+    if Config.AntiExplosions then
+        if obj:IsA("Explosion") then
+            obj.BlastPressure, obj.BlastRadius = 0, 0 local kids = obj:GetChildren()
+            for i = 1, #kids do local p = kids[i] if p:IsA("ParticleEmitter") or p:IsA("Fire") or p:IsA("Smoke") then p:Destroy() end end
+        elseif obj:IsA("Decal") or obj:IsA("Texture") then pcall(function() obj:Destroy() end)
+        elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Sparkles") then obj.Enabled = false end
+    end
+    if Config.UltimateBoost and obj:IsA("BasePart") and not Players:GetPlayerFromCharacter(obj.Parent) then obj.Material, obj.CastShadow, obj.Reflectance = Enum.Material.SmoothPlastic, false, 0 end
+    if Config.ClearEffects then
+        if obj:IsA("ParticleEmitter") or obj:IsA("Sparkles") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") then obj.Enabled = false
+        elseif obj:IsA("Light") then obj.Enabled, obj.Shadows = false, false end
+    end
+end
+
+local function PurgeMapToBaseplate()
+    if not Config.BaseplateOnly then return end
+    local items = Workspace:GetChildren() local chunk = 150
+    for i = 1, #items do
+        local item = items[i] if item ~= Workspace.CurrentCamera and not Players:GetPlayerFromCharacter(item) and item.Name ~= "Baseplate" then pcall(function() item:Destroy() end) end
+        if i % chunk == 0 then task.wait() end
+    end
+end
+
+local function ApplyAntiSit(char)
+    local hum = char:WaitForChild("Humanoid", 5) if not hum then return end
+    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, not Config.AntiSit) if Config.AntiSit and hum.Sit then hum.Sit = false end
+end
+
+local gui = new("ScreenGui", { Name = "WG_LowLag_Hub", ResetOnSpawn = false, DisplayOrder = 100, Parent = GUI_PARENT })
+local main = new("Frame", { Size = UDim2.fromOffset(420, 360), Position = UDim2.new(0.3, 0, 0.2, 0), BackgroundColor3 = rgb(12, 8, 22), Active = true, Parent = gui }, { corner(UDim.new(0, 16)) })
+makeDraggable(main)
+
+local stroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = main })
+local sg = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = stroke })
+TweenService:Create(sg, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), { Rotation = 360 }):Play()
+
+if CONFIG.BG_IMAGE ~= "" then new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0, Image = CONFIG.BG_IMAGE, ImageTransparency = 0.45, ScaleType = Enum.ScaleType.Crop, ZIndex = 1, Parent = main }, { corner(UDim.new(0, 16)) }) end
+
+local Header = new("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, ZIndex = 2, Parent = main })
+local title = new("TextLabel", { Size = UDim2.new(1, -75, 0, 20), Position = UDim2.fromOffset(15, 5), BackgroundTransparency = 1, Text = "★ " .. CONFIG.CLAN_NAME .. " CLAN UI ★", TextSize = 13, Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 4, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header })
+local g = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = title })
+loopGradient(g, 3)
+
+local signatureLabel = new("TextLabel", { Size = UDim2.new(1, -75, 0, 15), Position = UDim2.fromOffset(15, 22), BackgroundTransparency = 1, Text = string.lower(CONFIG.MY_NAME) .. " on top", TextSize = 10, Font = Enum.Font.GothamSemibold, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 4, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header })
+local sigG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = signatureLabel })
+loopGradient(sigG, 3)
+
+local MinBtn = new("TextButton", { Size = UDim2.fromOffset(25, 25), Position = UDim2.new(1, -65, 0, 7), BackgroundTransparency = 1, Text = "-", TextSize = 22, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 5, Parent = Header })
+local minG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = MinBtn })
+loopGradient(minG, 3)
+
+local CloseBtn = new("TextButton", { Size = UDim2.fromOffset(25, 25), Position = UDim2.new(1, -35, 0, 7), BackgroundTransparency = 1, Text = "X", TextSize = 14, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 5, Parent = Header })
+local closeG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = CloseBtn })
+loopGradient(closeG, 3)
+CloseBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+local FPSLabel = new("TextLabel", { Size = UDim2.new(1, -30, 0, 25), Position = UDim2.fromOffset(15, 42), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = main })
+local fpsG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = FPSLabel })
+loopGradient(fpsG, 3)
+task.spawn(function()
+local lastUpdate, frameCount = os.clock(), 0
+RunService.RenderStepped:Connect(function()
+frameCount = frameCount + 1 local now = os.clock() local delta = now - lastUpdate
+if delta >= 1.0 then local cur = math.round(frameCount / delta) frameCount, lastUpdate = 0, now
+local txt = "[MODERATE]" if cur >= 55 then txt = "[EXCELLENT]" elseif cur < 30 then txt = "[LAGGING]" end
+FPSLabel.Text = string.format("FPS: %d | Status: %s", cur, txt)
+end
+end)
+end)
+-- شريط تمرير أملس مخفي الـ Scrollbar لقطع حواف الأزرار عند سحبها أفقياً
+local TabsBar = new("ScrollingFrame", {
+Size = UDim2.new(1, -30, 0, 32),
+Position = UDim2.fromOffset(15, 68),
+BackgroundTransparency = 1,
+ScrollBarThickness = 0, -- تصفير الحجم لإخفائه بالكامل وجعل حواف المكتبة تقص التبويبات
+ScrollingDirection = Enum.ScrollingDirection.X,
+CanvasSize = UDim2.new(0, 470, 0, 0),
+ClipsDescendants = true, -- تفعيل القص البصري لتبدو التبويبات كأنها تختفي بداخل حافة الإطار
+ZIndex = 6,
+Parent = main
+})
+local TabsLayout = new("UIListLayout", {
+FillDirection = Enum.FillDirection.Horizontal,
+HorizontalAlignment = Enum.HorizontalAlignment.Left,
+VerticalAlignment = Enum.VerticalAlignment.Center,
+Padding = UDim.new(0, 6),
+SortOrder = Enum.SortOrder.LayoutOrder,
+Parent = TabsBar
+})
+local Separator = new("Frame", { Position = UDim2.fromOffset(15, 104), Size = UDim2.new(1, -30, 0, 1), BackgroundColor3 = Color3.fromRGB(45, 45, 45), BorderSizePixel = 0, ZIndex = 4, Parent = main })
+local TabPages, currentTab, TabButtons = {}, "Main", {}
+local function CreateTabContentFrame(name, visible)
+local sf = new("ScrollingFrame", { Size = UDim2.new(1, -20, 1, -125), Position = UDim2.fromOffset(10, 114), BackgroundTransparency = 1, CanvasSize = UDim2.new(0, 0, 0, 420), ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(45, 45, 45), ZIndex = 4, Parent = main, ClipsDescendants = true, Visible = visible })
+local list = new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = sf })
+list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() sf.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 15) end)
+TabPages[name] = sf return sf
+end
+local MainContentFrame = CreateTabContentFrame("Main", true)
+local FpsContentFrame  = CreateTabContentFrame("FPS", false)
+local SmlaContentFrame = CreateTabContentFrame("smla", false)
+local ClanContentFrame = CreateTabContentFrame("Clan", false)
+local BhContentFrame   = CreateTabContentFrame("Brookhaven", false)
+local function SwitchTab(tabName)
+currentTab = tabName
+for name, frame in pairs(TabPages) do frame.Visible = (name == tabName) end
+for name, btnData in pairs(TabButtons) do
+if name == tabName then
+tween(btnData.Button, 0.2, { BackgroundColor3 = rgb(25, 10, 40) })
+tween(btnData.Stroke, 0.2, { Thickness = 2 })
+btnData.Button.TextColor3 = rgb(255, 255, 255)
+btnData.Button.TextTransparency = 0
+else
+tween(btnData.Button, 0.2, { BackgroundColor3 = rgb(15, 12, 22) })
+tween(btnData.Stroke, 0.2, { Thickness = 1 })
+btnData.Button.TextColor3 = rgb(180, 175, 190)
+btnData.Button.TextTransparency = 0.25
+end
+end
+end
+local function AddTabButton(text, targetTab, order)
+local btn = new("TextButton", { Size = UDim2.fromOffset(86, 24), BackgroundColor3 = rgb(15, 12, 22), LayoutOrder = order, Text = text, TextSize = 10, Font = Enum.Font.GothamBlack, TextColor3 = rgb(255, 255, 255), ZIndex = 7, Parent = TabsBar }, { corner(UDim.new(0, 5)) })
+local bStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = btn })
+local btnG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = bStroke })
+loopGradient(btnG, 3)
+TabButtons[targetTab] = { Button = btn, Stroke = bStroke, StrokeGrad = btnG }
+btn.MouseEnter:Connect(function() if currentTab ~= targetTab then tween(btn, 0.15, { BackgroundColor3 = rgb(20, 15, 30), TextTransparency = 0 }) tween(bStroke, 0.15, { Thickness = 1.5 }) end end)
+btn.MouseLeave:Connect(function() if currentTab ~= targetTab then tween(btn, 0.15, { BackgroundColor3 = rgb(15, 12, 22), TextTransparency = 0.25 }) tween(bStroke, 0.15, { Thickness = 1 }) end end)
+btn.MouseButton1Click:Connect(function() SwitchTab(targetTab) end)
+end
+AddTabButton("👑 MAIN", "Main", 1)
+AddTabButton("⚡ ENGINE", "FPS", 2)
+AddTabButton("☣ SMLA", "smla", 3)
+AddTabButton("🔥 CLAN", "Clan", 4)
+AddTabButton("🏡 BH", "Brookhaven", 5)
+SwitchTab("Main")
+local minimized, isTweening = false, false
+MinBtn.MouseButton1Click:Connect(function()
+if isTweening then return end isTweening = true minimized = not minimized MinBtn.Text = minimized and "+" or "-"
+if minimized then
+for _, v in pairs(TabPages) do v.Visible = false end TabsBar.Visible, Separator.Visible = false, false
+local tw = tween(main, 0.25, { Size = UDim2.fromOffset(420, 72) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) tw.Completed:Connect(function() isTweening = false end)
+else
+local tw = tween(main, 0.25, { Size = UDim2.fromOffset(420, 360) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+tw.Completed:Connect(function()
+TabsBar.Visible = true
+Separator.Visible = true
+SwitchTab(currentTab)
+isTweening = false
+end)
+end
+end)
+local function CreateToggle(text, order, targetFrame, callback)
+local Row = new("Frame", { Size = UDim2.new(1, -10, 0, 38), BackgroundColor3 = rgb(15, 15, 15), BackgroundTransparency = 0.4, LayoutOrder = order, ZIndex = 4, Parent = targetFrame }, { corner(UDim.new(0, 4)) })
+local rowStroke = new("UIStroke", { Color = Color3.fromRGB(35, 35, 35), Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = Row })
+new("TextLabel", { Size = UDim2.new(1, -70, 1, 0), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, Text = text, TextColor3 = rgb(200, 200, 200), TextSize = 11, Font = Enum.Font.GothamSemibold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = Row })
+local Btn = new("TextButton", { Size = UDim2.fromOffset(50, 22), Position = UDim2.new(1, -62, 0, 8), BackgroundColor3 = rgb(30, 20, 20), Text = "OFF", TextSize = 10, Font = Enum.Font.GothamBold, TextColor3 = rgb(180, 70, 70), ZIndex = 4, Parent = Row }, { corner(UDim.new(0, 4)) })
+local active = false
+Btn.MouseButton1Click:Connect(function() active = not active Btn.Text = active and "ON" or "OFF" Btn.BackgroundColor3 = active and rgb(20, 35, 25) or rgb(30, 20, 20) Btn.TextColor3 = active and rgb(80, 200, 100) or rgb(180, 70, 70) callback(active) end)
+end
+local AntiAfkGui, AfkMainFrame
+local function CreateAntiAfkWindow()
+if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then CoreGui["WG_AntiAFK_Gui"]:Destroy() end
+AntiAfkGui = new("ScreenGui", { Name = "WG_AntiAFK_Gui", Parent = CoreGui })
+AfkMainFrame = new("Frame", { Size = UDim2.fromOffset(260, 130), Position = UDim2.new(0.05, 0, 0.3, 0), BackgroundTransparency = 1, Active = true, Parent = AntiAfkGui })
+makeDraggable(AfkMainFrame)
+local BgImg = new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = "rbxassetid://105816052547218", ScaleType = Enum.ScaleType.Crop, ZIndex = 1, Parent = AfkMainFrame }, { corner(UDim.new(0, 10)) })
+local frameStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = BgImg })
+local strokeGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, Color3.new(1, 1, 1)), kp(1, CONFIG.ACCENT) }), Parent = frameStroke })
+loopGradient(strokeGrad, 3)
+local Title = new("TextLabel", { Size = UDim2.new(1, 0, 0, 35), Position = UDim2.new(0, 0, 0, 5), Text = "★ WG antiAFK ★", TextColor3 = Color3.new(1, 1, 1), TextSize = 20, Font = Enum.Font.SourceSansBold, BackgroundTransparency = 1, TextStrokeTransparency = 0.15, TextStrokeColor3 = Color3.new(0, 0, 0), ZIndex = 3, Parent = AfkMainFrame })
+local TitleGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, Color3.new(1, 1, 1)), kp(1, CONFIG.ACCENT) }), Parent = Title })
+loopGradient(TitleGrad, 3)
+new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), Position = UDim2.new(0, 0, 0, 45), Text = "Clan: " .. CONFIG.CLAN_NAME .. " | By: " .. CONFIG.MY_NAME, TextColor3 = rgb(15, 15, 15), TextSize = 14, Font = Enum.Font.SourceSansBold, BackgroundTransparency = 1, TextStrokeTransparency = 0.4, TextStrokeColor3 = Color3.new(1, 1, 1), ZIndex = 3, Parent = AfkMainFrame })
+new("TextLabel", { Size = UDim2.new(1, 0, 0, 40), Position = UDim2.new(0, 0, 0, 80), Text = "● ميزة منع الخمول تعمل بنجاح وآمنة", TextColor3 = rgb(0, 200, 50), TextSize = 13, Font = Enum.Font.GothamBold, BackgroundTransparency = 1, TextStrokeTransparency = 0.3, TextStrokeColor3 = Color3.new(0, 0, 0), ZIndex = 3, Parent = AfkMainFrame })
+end
+local TrackerGui, TrackerMainFrame, ScrollFrame, TrackerHeader, TrackerSearchBox
+local trackerMinimized, isTrackerTweening = false, false
+local function CreatePlayerRow(username, userId)
+if not ScrollFrame or UIEntries[username] then return end
+local Row = new("Frame", { Size = UDim2.new(1, -10, 0, 50), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Parent = ScrollFrame }, { corner(UDim.new(0, 6)) })
+Row.Visible = (currentSearchText == "" or string.find(string.lower(username), string.lower(currentSearchText)) ~= nil)
+local Img = new("ImageLabel", { Size = UDim2.fromOffset(36, 36), Position = UDim2.fromOffset(8, 7), BackgroundTransparency = 1, Image = "rbxassetid://0", ZIndex = 3, Parent = Row }, { corner(UDim.new(1, 0)) })
+task.spawn(function()
+local ok, thumb = pcall(function() return Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48) end)
+if ok and Img and Img.Parent then Img.Image = thumb end
+end)
+local Stats = new("TextLabel", { Size = UDim2.new(1, -115, 0, 18), Position = UDim2.fromOffset(55, 24), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(160, 160, 160), Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = Row })
+local Ind = new("Frame", { Size = UDim2.new(0, 3, 1, -16), Position = UDim2.new(1, -10, 0, 8), BackgroundColor3 = Color3.fromRGB(0, 200, 100), BorderSizePixel = 0, ZIndex = 3, Parent = Row }, { corner(UDim.new(1, 0)) })
+local Toggle = new("TextButton", { Size = UDim2.fromOffset(45, 24), Position = UDim2.new(1, -65, 0, 13), BackgroundColor3 = rgb(20, 40, 25), Text = "ON", TextSize = 11, TextColor3 = rgb(100, 255, 100), Font = Enum.Font.GothamBold, ZIndex = 3, Parent = Row }, { corner(UDim.new(0, 4)) })
+local function UpdateToggleVisuals(isPresent, isDisabled)
+if isDisabled then
+Toggle.Text = "OFF" Toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40) Toggle.TextColor3 = Color3.fromRGB(150, 150, 150)
+elseif not isPresent then
+Toggle.Text = "OUT" Toggle.BackgroundColor3 = Color3.fromRGB(50, 15, 15) Toggle.TextColor3 = Color3.fromRGB(255, 70, 70)
+else
+Toggle.Text = "ON" Toggle.BackgroundColor3 = Color3.fromRGB(20, 40, 25) Toggle.TextColor3 = Color3.fromRGB(100, 255, 100)
+end
+end
+Toggle.MouseButton1Click:Connect(function()
+local d = ServerDatabase[username]
+if d then
+d.TrackingDisabled = not d.TrackingDisabled
+UpdateToggleVisuals(d.IsPresent, d.TrackingDisabled)
+if d.TrackingDisabled then
+if d.IsPresent then d.PastSeconds = d.PastSeconds + (os.time() - d.TimeJoined) end
+Stats.Text = "TRACKING DISABLED"
+else
+if d.IsPresent then
+d.TimeJoined = os.time()
+Stats.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
+Ind.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100)
+else
+Stats.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
+Ind.BackgroundColor3 = Color3.fromRGB(255, 40, 40)
+end
+end
+end
+end)
+UIEntries[username] = {Frame = Row, TextLabel = Stats, Indicator = Ind, ToggleBtn = Toggle, UpdateVisuals = UpdateToggleVisuals}
+end
+local function CreateTrackerWindow()
+if CoreGui:FindFirstChild("WG_Premium_Tracker") then CoreGui["WG_Premium_Tracker"]:Destroy() end
+trackerMinimized = false
+TrackerGui = new("ScreenGui", { Name = "WG_Premium_Tracker", Parent = CoreGui })
+TrackerMainFrame = new("Frame", { Size = UDim2.fromOffset(460, 420), Position = UDim2.new(0.15, 0, 0.2, 0), BackgroundTransparency = 1, Active = true, Parent = TrackerGui })
+makeDraggable(TrackerMainFrame)
+local BgImg = new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = "rbxassetid://120125603923365", ScaleType = Enum.ScaleType.Crop, Parent = TrackerMainFrame }, { corner(UDim.new(0, 10)) })
+local frameStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = BgImg })
+local strokeGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, Color3.new(1, 1, 1)), kp(1, CONFIG.ACCENT) }), Parent = frameStroke })
+loopGradient(strokeGrad, 3)
+TrackerHeader = new("Frame", { Size = UDim2.new(1, 0, 0, 45), BackgroundTransparency = 1, ZIndex = 2, Parent = TrackerMainFrame })
+local Title = new("TextLabel", { Size = UDim2.new(0, 340, 1, 0), Position = UDim2.fromOffset(20, 0), BackgroundTransparency = 1, Text = CONFIG.CLAN_NAME .. " ON TOP tracker", TextColor3 = Color3.new(1, 1, 1), TextSize = 18, Font = Enum.Font.SourceSansBold, TextXAlignment = Enum.TextXAlignment.Left, TextStrokeTransparency = 0.1, TextStrokeColor3 = Color3.new(0, 0, 0), ZIndex = 3, Parent = TrackerHeader })
+local TitleGradient = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, Color3.new(1, 1, 1)), kp(1, CONFIG.ACCENT) }), Parent = Title })
+loopGradient(TitleGradient, 3)
+local TrackerMinBtn = new("TextButton", { Size = UDim2.fromOffset(25, 25), Position = UDim2.new(1, -65, 0, 10), BackgroundTransparency = 1, Text = "-", TextSize = 22, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 5, Parent = TrackerHeader })
+local tMinG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = TrackerMinBtn })
+loopGradient(tMinG, 3)
+local TrackerCloseBtn = new("TextButton", { Size = UDim2.fromOffset(25, 25), Position = UDim2.new(1, -35, 0, 10), BackgroundTransparency = 1, Text = "X", TextSize = 14, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 5, Parent = TrackerHeader })
+local tCloseG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = TrackerCloseBtn })
+loopGradient(tCloseG, 3)
+TrackerCloseBtn.MouseButton1Click:Connect(function() TrackerGui:Destroy() end)
+local Divider = new("Frame", { Size = UDim2.new(1, -40, 0, 1), Position = UDim2.fromOffset(20, 45), BackgroundColor3 = Color3.fromRGB(50, 50, 50), BorderSizePixel = 0, ZIndex = 2, Parent = TrackerMainFrame })
+TrackerSearchBox = new("TextBox", { Size = UDim2.new(1, -40, 0, 32), Position = UDim2.fromOffset(20, 55), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = currentSearchText, PlaceholderText = "Search player username...", TextColor3 = Color3.fromRGB(235, 235, 235), PlaceholderColor3 = Color3.fromRGB(120, 120, 120), Font = Enum.Font.GothamSemibold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, ZIndex = 2, Parent = TrackerMainFrame }, { corner(UDim.new(0, 6)) })
+local searchStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, Parent = TrackerSearchBox })
+local searchGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, Color3.new(1, 1, 1)), kp(1, CONFIG.ACCENT) }), Parent = searchStroke })
+loopGradient(searchGrad, 4)
+new("UIPadding", { PaddingLeft = UDim.new(0, 12), Parent = TrackerSearchBox })
+ScrollFrame = new("ScrollingFrame", { Size = UDim2.new(1, -40, 0, 290), Position = UDim2.fromOffset(20, 105), BackgroundTransparency = 1, CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 5, ScrollBarImageColor3 = CONFIG.ACCENT, ScrollingDirection = Enum.ScrollingDirection.Y, AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 2, Parent = TrackerMainFrame })
+local UIList = new("UIListLayout", { Padding = UDim.new(0, 8), Parent = ScrollFrame })
+TrackerSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+currentSearchText = TrackerSearchBox.Text
+for name, ui in pairs(UIEntries) do ui.Frame.Visible = (currentSearchText == "" or string.find(string.lower(name), string.lower(currentSearchText)) ~= nil) end
+end)
+TrackerMinBtn.MouseButton1Click:Connect(function()
+if isTrackerTweening then return end isTrackerTweening = true trackerMinimized = not trackerMinimized TrackerMinBtn.Text = trackerMinimized and "+" or "-"
+if trackerMinimized then
+ScrollFrame.Visible = false TrackerSearchBox.Visible = false Divider.Visible = false
+local tw = tween(TrackerMainFrame, 0.25, { Size = UDim2.fromOffset(460, 72) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) tw.Completed:Connect(function() isTrackerTweening = false end)
+else
+local tw = tween(TrackerMainFrame, 0.25, { Size = UDim2.fromOffset(460, 420) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+tw.Completed:Connect(function() ScrollFrame.Visible = true TrackerSearchBox.Visible = true Divider.Visible = true isTrackerTweening = false end)
+end
+end)
+for username, d in pairs(ServerDatabase) do
+CreatePlayerRow(username, d.UserId)
+local ui = UIEntries[username]
+if ui then
+ui.UpdateVisuals(d.IsPresent, d.TrackingDisabled)
+if not d.IsPresent then
+ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40)
+ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
+else
+ui.Indicator.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100)
+ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds + (os.time() - d.TimeJoined)))
+end
+end
+end
+end
+local function SetupTrackerLogic(p, isNew)
+if not p then return end
+local d = ServerDatabase[p.Name]
+ServerDatabase[p.Name] = {UserId = p.UserId, TimeJoined = os.time(), PastSeconds = d and d.PastSeconds or 0, JoinsCount = d and (d.JoinsCount+1) or 1, LeavesCount = d and d.LeavesCount or 0, IsPresent = true, Status = isNew and "rj3" or "active", TrackingDisabled = d and d.TrackingDisabled or false}
+if isNew then print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " دخل السيرفر!") end
+if ScrollFrame then
+CreatePlayerRow(p.Name, p.UserId)
+local ui = UIEntries[p.Name]
+if ui then ui.UpdateVisuals(true, ServerDatabase[p.Name].TrackingDisabled) end
+end
+if isNew then task.spawn(function() task.wait(3) local cur = ServerDatabase[p.Name] if cur and cur.IsPresent and not cur.TrackingDisabled then cur.Status = "active" end end) end
+end
+for _, p in pairs(Players:GetPlayers()) do SetupTrackerLogic(p, false) end
+Players.PlayerAdded:Connect(function(p) SetupTrackerLogic(p, true) end)
+Players.PlayerRemoving:Connect(function(p)
+local d, ui = ServerDatabase[p.Name], UIEntries[p.Name]
+if d and d.IsPresent then
+d.IsPresent = false
+print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " غادر السيرفر!")
+d.LeavesCount, d.Status = d.LeavesCount + 1, "w333 hrb"
+if not d.TrackingDisabled then
+d.PastSeconds = d.PastSeconds + (os.time() - d.TimeJoined)
+end
+if ui then
+ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40)
+ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
+ui.UpdateVisuals(false, d.TrackingDisabled)
+end
+end
+end)
+-- [[ تبويب MAIN ]]
+local MainInfo = new("TextLabel", { Size = UDim2.new(1, -10, 0, 30), BackgroundTransparency = 1, LayoutOrder = 1, Text = "👑 " .. CONFIG.CLAN_NAME .. " MAIN HUB CONTROL 👑", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = MainContentFrame })
+local mainG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = MainInfo })
+loopGradient(mainG, 3)
+-- [[ تبويب ENGINE ]]
+CreateToggle("Invisible Identity Purge (Names Only)", 1, FpsContentFrame, function(state) Config.PurgeAvatars = state if state then for _, p in ipairs(Players:GetPlayers()) do if p.Character then task.spawn(StripCharacter, p.Character) end end end end)
+Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function(char) if Config.PurgeAvatars then task.spawn(StripCharacter, char) end end) end)
+CreateToggle("Lock Server Time (12 PM) & Weather", 2, FpsContentFrame, function(state) Config.FreezeWeather = state if state then ExtremeSkyClean() end end)
+CreateToggle("Anti-Explosion Shield & Texture", 3, FpsContentFrame, function(state) Config.AntiExplosions = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end)
+CreateToggle("Baseplate Only (Purge Map)", 4, FpsContentFrame, function(state) Config.BaseplateOnly = state if state then PurgeMapToBaseplate() end end)
+Workspace.ChildAdded:Connect(function() if Config.BaseplateOnly then PurgeMapToBaseplate() end end)
+CreateToggle("Ultimate FPS Boost (Smooth Plastic)", 5, FpsContentFrame, function(state) Config.UltimateBoost = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end)
+CreateToggle("Clear Map Effects & Debris", 6, FpsContentFrame, function(state) Config.ClearEffects = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0 then task.wait() end end end) end end)
+CreateToggle("Anti-Sit (No Shake / No-Clip Seats)", 7, FpsContentFrame, function(state) Config.AntiSit = state local char = Players.LocalPlayer.Character if char then ApplyAntiSit(char) end end)
+CreateToggle("Anti-Fling Shield", 8, FpsContentFrame, function(state) Config.AntiFling = state end)
+CreateToggle("God Mode Optimize (+100 FPS Engine)", 9, FpsContentFrame, function(state) Config.Engine100FPS = state if state then pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 if sethiddenproperty then sethiddenproperty(game:GetService("Lighting"), "Technology", Enum.Technology.Compatibility) end end) else pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic end) end end)
+CreateToggle("Auto Map Data Purge (Anti-Memory Leak)", 10, FpsContentFrame, function(state) Config.MapOptimizeActive = state end)
+-- [[ تبويب SMLA ]]
+local SmlaInfo = new("TextLabel", { Size = UDim2.new(1, -10, 0, 30), BackgroundTransparency = 1, LayoutOrder = 1, Text = "★ " .. CONFIG.CLAN_NAME .. " REPOSITORY | By: " .. CONFIG.MY_NAME .. " ★", TextColor3 = rgb(255, 255, 255), TextSize = 11, Font = Enum.Font.SourceSansBold, Parent = SmlaContentFrame })
+local smlaG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = SmlaInfo })
+loopGradient(smlaG, 3)
+CreateToggle("Activate Anti-AFK System", 2, SmlaContentFrame, function(state)
+Config.AntiAFK = state
+if state then CreateAntiAfkWindow() else if AntiAfkGui then pcall(function() AntiAfkGui:Destroy() end) end end
+end)
+CreateToggle("Activate Premium Tracker", 3, SmlaContentFrame, function(state)
+Config.TrackerEnabled = state
+if state then CreateTrackerWindow()
+else if TrackerGui then pcall(function() TrackerGui:Destroy() UIEntries = {} ScrollFrame = nil end) end end
+end)
+-- [[ تبويب CLAN ]]
+local SpeedValue = 50
+local isSpeedLoopRunning = false
+CreateToggle(CONFIG.CLAN_NAME .. " Speed Boost", 1, ClanContentFrame, function(state)
+Config.SpeedBoost = state
+if state and not isSpeedLoopRunning then
+isSpeedLoopRunning = true
+task.spawn(function()
+while Config.SpeedBoost do
+task.wait()
+pcall(function()
+local char = LocalPlayer.Character
+if char then
+local hum = char:FindFirstChildOfClass("Humanoid")
+local root = char:FindFirstChild("HumanoidRootPart")
+if hum and root and hum.MoveDirection.Magnitude > 0 then
+root.CFrame = root.CFrame + (hum.MoveDirection * (SpeedValue / 100))
+end
+end
+end)
+end
+isSpeedLoopRunning = false
+end)
+end
+end)
+-- [[ تبويب BROOKHAVEN ]]
+local BhInfo = new("TextLabel", { Size = UDim2.new(1, -10, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "★ BROOKHAVEN SYSTEM CONTROL ★", TextColor3 = rgb(255, 255, 255), TextSize = 10, Font = Enum.Font.SourceSansBold, Parent = BhContentFrame })
+local bhG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = BhInfo })
+loopGradient(bhG, 3)
+CreateToggle("🏡 Auto BH Optimization (Anti-Crash)", 2, BhContentFrame, function(state)
+Config.BHOptimize = state
+end)
+Workspace.DescendantAdded:Connect(function(item) if Config.AntiExplosions or Config.UltimateBoost or Config.ClearEffects then pcall(OptimizeWorldObject, item) end end)
+Players.LocalPlayer.CharacterAdded:Connect(function(char) if Config.AntiSit then task.spawn(ApplyAntiSit, char) end end)
+LocalPlayer.Idled:Connect(function()
+if Config.AntiAFK then pcall(function() VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame) task.wait(1) VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame) end) end
+end)
+local fixedAmbient = rgb(128, 128, 128)
+task.spawn(function()
+while true do
+task.wait(0.1)
+if Config.AntiFling then
+pcall(function()
+local char = LocalPlayer.Character
+local root = char and char:FindFirstChild("HumanoidRootPart")
+if root then
+root.RotVelocity = Vector3.new(0, 0, 0)
+local allPlayers = Players:GetPlayers()
+for i = 1, #allPlayers do
+local p = allPlayers[i]
+if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+local pRoot = p.Character.HumanoidRootPart
+if (pRoot.Position - root.Position).Magnitude < 15 then
+local pKids = p.Character:GetChildren()
+for j = 1, #pKids do
+local part = pKids[j]
+if part:IsA("BasePart") then
+part.CanCollide = false
+if part:IsA("Part") or part:IsA("MeshPart") then
+part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+end
+end
+end
+end
+end
+end
+end
+end)
+end
+end
+end)
+RunService.Heartbeat:Connect(function()
+if Config.FreezeWeather then pcall(function() local Lighting = game:GetService("Lighting") Lighting.ClockTime, Lighting.GlobalShadows, Lighting.ShadowSoftness, Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.FogEnd = 12, false, 0, fixedAmbient, fixedAmbient, 999999 end) end
+local char = LocalPlayer.Character
+if char then
+local hum = char:FindFirstChildOfClass("Humanoid")
+if Config.AntiSit and hum then if hum.Sit then hum.Sit = false end hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false) end
+end
+if Config.TrackerEnabled and ScrollFrame then
+for name, d in pairs(ServerDatabase) do
+local ui = UIEntries[name]
+if ui and d.IsPresent and not d.TrackingDisabled then
+ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds + (os.time() - d.TimeJoined)))
+end
+end
+end
+end)
+task.spawn(function() while task.wait(3) do if Config.FreezeWeather then pcall(ExtremeSkyClean) end end end)
+task.spawn(function()
+while true do
+task.wait(10)
+if Config.MapOptimizeActive then
+pcall(function()
+if gcinfo then gcinfo() end
+local des = Workspace:GetDescendants() local chunk = 150
+for i = 1, #des do
+local item = des[i]
+if item:IsA("Debris") or item.Name == "Effect" or item.Name == "Bullet" or item.Name == "Laser" then
+pcall(function() item:Destroy() end)
+end
+if i % chunk == 0 then task.wait() end
+end
+end)
+end
+end
+end)
+task.spawn(function()
+while true do
+task.wait(5)
+if Config.BHOptimize then
+pcall(function()
+local char = LocalPlayer.Character
+local root = char and char:FindFirstChild("HumanoidRootPart")
+if root then
+local des = Workspace:GetDescendants() local chunk = 100
+for i = 1, #des do
+local item = des[i]
+if item:IsA("BasePart") and not Players:GetPlayerFromCharacter(item.Parent) and item.Name ~= "Baseplate" then
+local dist = (item.Position - root.Position).Magnitude
+if dist > 80 then
+item.Velocity = Vector3.new(0, 0, 0)
+item.RotVelocity = Vector3.new(0, 0, 0)
+end
+end
+if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") then
+if item.Parent and item.Parent:IsA("Workspace") then
+pcall(function() item:Destroy() end)
+end
+end
+if i % chunk == 0 then task.wait() end
+end
+end
+end)
+end
+end
+end)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+if not gameProcessed and input.KeyCode == Enum.KeyCode.K then
+main.Visible = not main.Visible
+if AfkMainFrame then AfkMainFrame.Visible = main.Visible end
+if TrackerMainFrame then
+if trackerMinimized then TrackerMainFrame.Visible = main.Visible ScrollFrame.Visible = false TrackerSearchBox.Visible = false
+else TrackerMainFrame.Visible = main.Visible end
+end
+end
+end)
+local function ForceChatAnnouncement(msg)
+task.spawn(function()
+pcall(function()
+if TextChatService and TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+local textChannel = TextChatService:FindFirstChild("TextChannels") and TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+if textChannel then
+textChannel:SendAsync(msg)
+end
+else
+local localSayMessageRequest = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents") and game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+if localSayMessageRequest then
+localSayMessageRequest:FireServer(msg, "All")
+end
+end
+end)
+end)
+end
+ForceChatAnnouncement("WG ON TOP // 7OKAM SMLA>By KAi")
