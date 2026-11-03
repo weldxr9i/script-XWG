@@ -169,9 +169,9 @@ loopGradient(sg, 4)
 
 if CONFIG.BG_IMAGE ~= "" then new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0, Image = CONFIG.BG_IMAGE, ImageTransparency = 0.45, ScaleType = Enum.ScaleType.Crop, ZIndex = 1, Parent = main }, { corner(UDim.new(0, 16)) }) end
 
--- [[ زر التوغل العائم المطور مع الصقيع والجسيمات المتلاشية ]]
+-- [[ زر التوغل العائم المطور مع نظام المجرة الرباعية الأذرع ]]
 local toggleGui = new("ScreenGui", { Name = "WG_Floating_Toggle", ResetOnSpawn = false, DisplayOrder = 101, Parent = GUI_PARENT })
-local floatBtn = new("TextButton", { Name = "ToggleBtn", Size = UDim2.fromOffset(52, 52), Position = UDim2.new(0.02, 0, 0.2, 0), BackgroundTransparency = 1, Text = "", Active = true, ZIndex = 10, Parent = toggleGui })
+local floatBtn = new("TextButton", { Name = "ToggleBtn", Size = UDim2.fromOffset(55, 55), Position = UDim2.new(0.02, 0, 0.2, 0), BackgroundTransparency = 1, Text = "", Active = true, ZIndex = 10, Parent = toggleGui })
 makeDraggable(floatBtn)
 
 local floatImg = new("ImageLabel", { Size = UDim2.fromScale(1, 1), Image = CONFIG.TOGGLE_IMG, BackgroundTransparency = 1, ZIndex = 11, Parent = floatBtn }, { corner(UDim.new(1, 0)) })
@@ -179,33 +179,66 @@ local floatStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2
 local floatGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = floatStroke })
 loopGradient(floatGrad, 3)
 
-local frostPoints = new("ParticleEmitter", {
-    LightEmission = 0.85,
-    Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 3.5),
-        NumberSequenceKeypoint.new(0.7, 2),
-        NumberSequenceKeypoint.new(1, 0)
-    }),
-    Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.2),
-NumberSequenceKeypoint.new(0.8, 0.5),
-NumberSequenceKeypoint.new(1, 1)
-}),
-Texture = "rbxassetid://9257610414",
-Lifetime = NumberRange.new(0.5, 1.0),
-Rate = 22,
-Speed = NumberRange.new(4, 9),
-SpreadAngle = Vector2.new(-180, 180),
-Color = ColorSequence.new({
-kp(0, CONFIG.ACCENT_2),
-kp(0.5, Color3.fromRGB(255, 255, 255)),
-kp(1, CONFIG.ACCENT)
-}),
-Parent = floatImg
-})
-local floatText = new("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "WG", TextSize = 15, Font = Enum.Font.GothamBlack, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.2, TextStrokeColor3 = rgb(10, 5, 20), ZIndex = 12, Parent = floatBtn })
+local floatText = new("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "WG", TextSize = 16, Font = Enum.Font.GothamBlack, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.2, TextStrokeColor3 = rgb(10, 5, 20), ZIndex = 12, Parent = floatBtn })
 local floatTextGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = floatText })
 loopGradient(floatTextGrad, 3)
+-- [[ نظام الجزيئات المنظم هندسياً للمجرة ذات الـ 4 أذرع المتلاشية الحواف ]]
+local particleContainer = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 9, Parent = floatBtn })
+task.spawn(function()
+local galaxyTime = 0
+local galaxyParticles = {}
+local colors = {CONFIG.ACCENT, CONFIG.ACCENT_2, Color3.fromRGB(255, 255, 255), Color3.fromRGB(190, 100, 255)}
+local rotConn = RunService.RenderStepped:Connect(function(dt)
+galaxyTime = galaxyTime + dt
+-- إنشاء 4 أذرع للمجرة موزعة بانتظام هندسي (كل 90 درجة ذراع)
+for arm = 1, 4 do
+local armAngle = ((arm - 1) * 90) + (galaxyTime * 130) -- سرعة دوران الهيكل العام للمجرة
+-- توليد جزيء مرتب ومنظم لكل ذراع في كل تحديث شاشة
+local radius = math.random(22, 40) -- امتداد قطري حول محيط حواف الدائرة بدقة
+local spiralAngle = armAngle + (radius * 4.0) -- معادلة لولبة وتقويس الأذرع الأربعة المنسقة
+local rad = math.rad(spiralAngle)
+local pX = 0.5 + (math.cos(rad) * radius / 55)
+local pY = 0.5 + (math.sin(rad) * radius / 55)
+local p = new("Frame", {
+Size = UDim2.fromOffset(math.random(2, 4), math.random(2, 4)),
+BackgroundColor3 = colors[math.random(1, #colors)],
+BorderSizePixel = 0,
+Position = UDim2.fromScale(pX, pY),
+ZIndex = math.random(1, 2) == 1 and 9 or 13,
+Parent = particleContainer
+}, { corner(UDim.new(1, 0)) })
+table.insert(galaxyParticles, {
+Obj = p,
+Age = 0,
+MaxAge = math.random(5, 8) / 10,
+BaseRadius = radius,
+AngleOffset = spiralAngle
+})
+end
+-- تحديث وحساب دوران جزيئات الأذرع وتلاشي أطرافها الخارجية تماماً
+for i = #galaxyParticles, 1, -1 do
+local data = galaxyParticles[i]
+data.Age = data.Age + dt
+if data.Age >= data.MaxAge then
+data.Obj:Destroy()
+table.remove(galaxyParticles, i)
+else
+local progress = data.Age / data.MaxAge
+-- دوران انسيابي مستمر لكل ذراع مع تمدد قطري طفيف لتلاشي غبار المجرة الحلزونية
+local currentAngle = data.AngleOffset + (galaxyTime * 40)
+local rad = math.rad(currentAngle)
+local dynamicRadius = data.BaseRadius + (progress * 5)
+local pX = 0.5 + (math.cos(rad) * dynamicRadius / 55)
+local pY = 0.5 + (math.sin(rad) * dynamicRadius / 55)
+data.Obj.Position = UDim2.fromScale(pX, pY)
+data.Obj.BackgroundTransparency = progress -- تلاشي تدريجي ذكي ومثالي للحواف
+local size = math.max(1, 4 * (1 - progress))
+data.Obj.Size = UDim2.fromOffset(size, size)
+end
+end
+end)
+table.insert(JanitorConnections, rotConn)
+end)
 floatBtn.MouseButton1Click:Connect(function()
 main.Visible = not main.Visible
 local targetFrame = CoreGui:FindFirstChild("WG_AntiAFK_Gui") and CoreGui["WG_AntiAFK_Gui"]:FindFirstChildOfClass("Frame")
@@ -307,19 +340,16 @@ local tw = tween(main, 0.25, { Size = UDim2.fromOffset(420, 360) }, Enum.EasingS
 tw.Completed:Connect(function() TabsBar.Visible = true Separator.Visible = true SwitchTab(currentTab) isTweening = false end)
 end
 end)
--- إنشاء السويتشات الأصلية الدائرية مع مزامنة التوهج اللوني المتطابق دورياً وبدون كتل برمجية تالفة
 local function CreateToggle(text, order, targetFrame, callback)
 local Row = new("Frame", { Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = rgb(15, 15, 15), BackgroundTransparency = 0.4, LayoutOrder = order, ZIndex = 4, Parent = targetFrame }, { corner(UDim.new(0, 4)) })
 local rowStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = Row })
 local rowGlowGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = rowStroke })
 loopGradient(rowGlowGrad, 3)
 new("TextLabel", { Size = UDim2.new(1, -70, 1, 0), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, Text = text, TextColor3 = rgb(240, 240, 240), TextSize = 11, Font = Enum.Font.GothamSemibold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = Row })
--- حاوية السويتش الدائرية المدمجة المتوافقة مع ألوان المكتبة (ACCENT و ACCENT_2)
 local ToggleBg = new("Frame", { Size = UDim2.fromOffset(50, 22), Position = UDim2.new(1, -62, 0, 8), BackgroundColor3 = rgb(25, 15, 30), ZIndex = 4, Parent = Row }, { corner(UDim.new(1, 0)) })
 local switchStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, Parent = ToggleBg })
 local switchGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = switchStroke })
 loopGradient(switchGrad, 4)
--- القرص الأصلي المنزلق المزامر للتألق النيوني المتحرك للمكتبة
 local Knob = new("TextButton", { Size = UDim2.fromOffset(18, 18), Position = UDim2.new(0, 2, 0, 2), BackgroundColor3 = rgb(140, 130, 155), Text = "OFF", TextSize = 7, Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1), ZIndex = 5, Parent = ToggleBg }, { corner(UDim.new(1, 0)) })
 local knobStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.2, Parent = Knob })
 local knobGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = knobStroke })
@@ -492,7 +522,6 @@ loopGradient(devTagG, 3)
 local FpsInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "⚡ " .. CONFIG.CLAN_NAME .. " ENGINE OPTIMIZER ⚡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = FpsContentFrame })
 local fpsTabG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = FpsInfo })
 loopGradient(fpsTabG, 3)
--- نظام العناوين الشفافة تماماً والمطابقة لنمط الخط المتوهج بالكامل
 local function CreateCollapsibleHeader(text, order, targetFrame)
 local Container = new("Frame", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = order, Parent = targetFrame })
 local Trigger = new("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = Container })
@@ -513,16 +542,14 @@ return function(item)
 table.insert(items, item)
 end
 end
--- مجموعة الحماية المباشرة فوق الأسطر الشفافة
 local RegisterAntiItem = CreateCollapsibleHeader("🛡️ ANTI PROTECTION FEATURES", 1, FpsContentFrame)
 local anti1 = CreateToggle("Anti-Sit (No Shake / No-Clip Seats)", 2, FpsContentFrame, function(state) Config.AntiSit = state local char = Players.LocalPlayer.Character if char then ApplyAntiSit(char) end end) RegisterAntiItem(anti1)
 local anti2 = CreateToggle("Anti-Fling Shield", 3, FpsContentFrame, function(state) Config.AntiFling = state end) RegisterAntiItem(anti2)
 local anti3 = CreateToggle("Anti-Explosion Shield & Texture", 4, FpsContentFrame, function(state) Config.AntiExplosions = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end) RegisterAntiItem(anti3)
 local anti4 = CreateToggle("Invisible Identity Purge (Names Only)", 5, FpsContentFrame, function(state) Config.PurgeAvatars = state if state then for _, p in ipairs(Players:GetPlayers()) do if p.Character then task.spawn(StripCharacter, p.Character) end end end end) RegisterAntiItem(anti4)
--- مجموعة تحسين المحرك الشفافة والمنظمة بشكل مباشر
 local RegisterOptItem = CreateCollapsibleHeader("⚡ PERFORMANCE & OPTIMIZATION", 6, FpsContentFrame)
 local opt1 = CreateToggle("God Mode Optimize (+100 FPS Engine)", 7, FpsContentFrame, function(state) Config.Engine100FPS = state if state then pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 if sethiddenproperty then sethiddenproperty(game:GetService("Lighting"), "Technology", Enum.Technology.Compatibility) end end) else pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic end) end end) RegisterOptItem(opt1)
-local opt2 = CreateToggle("Ultimate FPS Boost (Smooth Plastic)", 8, FpsContentFrame, function(state) Config.UltimateBoost = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end) RegisterOptItem(opt2)
+local opt2 = CreateToggle("Ultimate FPS Boost (Smooth Plastic)", 8, FpsContentFrame, function(state) Config.UltimateBoost = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0  then task.wait() end end end) end end) RegisterOptItem(opt2)
 local opt3 = CreateToggle("Lock Server Time (12 PM) & Weather", 9, FpsContentFrame, function(state) Config.FreezeWeather = state if state then ExtremeSkyClean() end end) RegisterOptItem(opt3)
 local opt4 = CreateToggle("Baseplate Only (Purge Map)", 10, FpsContentFrame, function(state) Config.BaseplateOnly = state if state then PurgeMapToBaseplate() end end) RegisterOptItem(opt4)
 local opt5 = CreateToggle("Clear Map Effects & Debris", 11, FpsContentFrame, function(state) Config.ClearEffects = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0 then task.wait() end end end) end end) RegisterOptItem(opt5)
@@ -533,14 +560,14 @@ local mapConn = Workspace.ChildAdded:Connect(function() if Config.BaseplateOnly 
 table.insert(JanitorConnections, mapConn)
 -- [[ تبويب SMLA ]]
 local SmlaInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 1, Text = "★ " .. CONFIG.CLAN_NAME .. " REPOSITORY | By: " .. CONFIG.MY_NAME .. " ★", TextColor3 = rgb(255, 255, 255), TextSize = 11, Font = Enum.Font.SourceSansBold, Parent = SmlaContentFrame })
-local smlaG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = SmlaInfo })
-loopGradient(smlaG, 3)
+local smlaG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = SmlaInfo })
+loopGradient(smlaG2, 3)
 CreateToggle("Activate Anti-AFK System", 2, SmlaContentFrame, function(state) Config.AntiAFK = state if state then CreateAntiAfkWindow() else if AntiAfkGui then pcall(function() AntiAfkGui:Destroy() end) end end end)
 CreateToggle("Activate Premium Tracker", 3, SmlaContentFrame, function(state) Config.TrackerEnabled = state if state then CreateTrackerWindow() else if TrackerGui then pcall(function() TrackerGui:Destroy() UIEntries = {} ScrollFrame = nil end) end end end)
 -- [[ تبويب CLAN ]]
 local ClanInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "🔥 " .. CONFIG.CLAN_NAME .. " CLAN MULTITOOLS 🔥", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = ClanContentFrame })
-local clanTabG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = ClanInfo })
-loopGradient(clanTabG, 3)
+local clanTabG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = ClanInfo })
+loopGradient(clanTabG2, 3)
 local SpeedValue = 50
 local isSpeedLoopRunning = false
 CreateToggle(CONFIG.CLAN_NAME .. " Speed Boost", 1, ClanContentFrame, function(state)
@@ -556,8 +583,8 @@ end
 end)
 -- [[ تبويب BROOKHAVEN ]]
 local BhInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "🏡 " .. CONFIG.CLAN_NAME .. " BROOKHAVEN CONTROL 🏡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = BhContentFrame })
-local bhG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = BhInfo })
-loopGradient(bhG, 3)
+local bhG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = BhInfo })
+loopGradient(bhG2, 3)
 CreateToggle("🏡 Auto BH Optimization (Anti-Crash)", 2, BhContentFrame, function(state) Config.BHOptimize = state end)
 -- [[ معالجة الأحداث واللوب المنفصل المستقر ]]
 local worldObsConn = Workspace.DescendantAdded:Connect(function(item) if Config.AntiExplosions or Config.UltimateBoost or Config.ClearEffects then pcall(OptimizeWorldObject, item) end end)
