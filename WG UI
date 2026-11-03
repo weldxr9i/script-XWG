@@ -203,8 +203,8 @@ local CloseBtn = new("TextButton", { Size = UDim2.fromOffset(25, 25), Position =
 local closeG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = CloseBtn })
 loopGradient(closeG, 3)
 CloseBtn.MouseButton1Click:Connect(function()
-for _, conn in ipairs(JanitorConnections) do if conn.Disconnect then pcall(function() conn:Disconnect() end) end end
-if toggleGui then toggleGui:Destroy() end
+for _, conn in ipairs(JanitorConnections) do if conn and conn.Disconnect then pcall(function() conn:Disconnect() end) end end
+if toggleGui then pcall(function() toggleGui:Destroy() end) end
 if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then pcall(function() CoreGui["WG_AntiAFK_Gui"]:Destroy() end) end
 if CoreGui:FindFirstChild("WG_Premium_Tracker") then pcall(function() CoreGui["WG_Premium_Tracker"]:Destroy() end) end
 gui:Destroy()
@@ -227,10 +227,9 @@ local TabsBar = new("ScrollingFrame", { Size = UDim2.new(1, -30, 0, 32), Positio
 local TabsLayout = new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Left, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = TabsBar })
 local Separator = new("Frame", { Position = UDim2.fromOffset(15, 104), Size = UDim2.new(1, -30, 0, 1), BackgroundColor3 = Color3.fromRGB(45, 45, 45), BorderSizePixel = 0, ZIndex = 4, Parent = main })
 local TabPages, currentTab, TabButtons = {}, "Main", {}
--- تم تعديل الدالة لتقوم بحساب الـ الحجم كاملاً بالبكسل مع فرض حماية إجبارية عبر UIPadding لمنع تداخل الحواف نهائياً مع الإطار الأيسر والأيمن
 local function CreateTabContentFrame(name, visible)
 local sf = new("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -125), Position = UDim2.fromOffset(0, 114), BackgroundTransparency = 1, CanvasSize = UDim2.new(0, 0, 0, 420), ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(45, 45, 45), ZIndex = 4, Parent = main, ClipsDescendants = true, Visible = visible })
-local padding = new("UIPadding", { PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), Parent = sf }) -- الفراغ الداخلي الإجباري الحامي للحواف
+local padding = new("UIPadding", { PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), Parent = sf })
 local list = new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = sf })
 list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() sf.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 15) end)
 TabPages[name] = sf return sf
@@ -395,7 +394,7 @@ if not p then return end local d = ServerDatabase[p.Name]
 ServerDatabase[p.Name] = {UserId = p.UserId, TimeJoined = os.time(), PastSeconds = d and d.PastSeconds or 0, JoinsCount = d and (d.JoinsCount+1) or 1, LeavesCount = d and d.LeavesCount or 0, IsPresent = true, Status = isNew and "rj3" or "active", TrackingDisabled = d and d.TrackingDisabled or false}
 if isNew then print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " دخل السيرفر!") end
 if ScrollFrame then CreatePlayerRow(p.Name, p.UserId) local ui = UIEntries[p.Name] if ui then ui.UpdateVisuals(true, ServerDatabase[p.Name].TrackingDisabled) end end
-if isNew then task.spawn(function() task.wait(3) local cur = ServerDatabase[p.Name] if cur and cur.IsPresent and not cur.TrackingDisabled_ then cur.Status = "active" end end) end
+if isNew then task.spawn(function() task.wait(3) local cur = ServerDatabase[p.Name] if cur and cur.IsPresent and not cur.TrackingDisabled then cur.Status = "active" end end) end
 end
 for _, p in pairs(Players:GetPlayers()) do SetupTrackerLogic(p, false) end
 local pAddConn = Players.PlayerAdded:Connect(function(p) SetupTrackerLogic(p, true) end)
@@ -412,8 +411,8 @@ table.insert(JanitorConnections, pRemConn)
 local MainInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "👑 " .. CONFIG.CLAN_NAME .. " DEVELOPER PROFILE 👑", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = MainContentFrame })
 local mainG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = MainInfo })
 loopGradient(mainG, 3)
--- تم ضبط الحجم ليكون متوافقاً 100% مع البادئة الإجبارية الجديدة دون أي التواء أو التفاف
-local ProfileCard = new("Frame", { Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = rgb(18, 14, 28), BackgroundTransparency = 0.3, LayoutOrder = 2, Parent = MainContentFrame }, { corner(UDim.new(0, 10)) })
+-- زيادة الحجم الطولي للبطاقة السوداء (من 150 لـ 175) لتنزل وتحتوي النص المتوهج بالكامل في الداخل بشكل مثالي
+local ProfileCard = new("Frame", { Size = UDim2.new(1, 0, 0, 175), BackgroundColor3 = rgb(18, 14, 28), BackgroundTransparency = 0.3, LayoutOrder = 2, Parent = MainContentFrame }, { corner(UDim.new(0, 10)) })
 local cardStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ProfileCard })
 local cardG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = cardStroke })
 loopGradient(cardG, 4)
@@ -438,8 +437,9 @@ InstaBtn.MouseButton1Click:Connect(function()
 if setclipboard then setclipboard(CONFIG.INSTA_USER) InstaTip.Text = "✓ Username Copied!" InstaTip.TextColor3 = rgb(80, 220, 100) task.wait(2) if InstaTip and InstaTip.Parent then InstaTip.Text = "Click to copy username" InstaTip.TextColor3 = rgb(180, 170, 200) end
 else InstaTip.Text = "Clipboard not supported!" InstaTip.TextColor3 = rgb(220, 80, 80) end
 end)
-local DevTag = new("TextLabel", { Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 3, BackgroundTransparency = 1, Text = "★ UI Framework Developed by Kai ★", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamSemibold, TextSize = 11, Parent = MainContentFrame })
-local devTagG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = DevTag })
+-- تم جعل النص تابعًا ومدرجًا كطفل (Child) داخل الـ ProfileCard لتطبيق التموضع الدقيق وحمايته من الخروج عن الحدود السوداء
+local DevTag = new("TextLabel", { Size = UDim2.new(1, -20, 0, 20), Position = UDim2.new(0, 10, 1, -25), BackgroundTransparency = 1, Text = "UI developed by KAi   AKA   XLI7A 7WAY L9WAWID", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.GothamSemibold, TextSize = 11, ZIndex = 5, Parent = ProfileCard })
+local devTagG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = DevTag })
 loopGradient(devTagG, 3)
 -- [[ تبويب ENGINE ]]
 local FpsInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "⚡ " .. CONFIG.CLAN_NAME .. " ENGINE OPTIMIZER ⚡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = FpsContentFrame })
@@ -513,21 +513,39 @@ if Config.AntiSit and hum then if hum.Sit then hum.Sit = false end hum:SetStateE
 end)
 table.insert(JanitorConnections, mainHeartbeat)
 task.spawn(function()
-local allPlayers = Players:GetPlayers()
 while true do task.wait(0.2)
-if Config.AntiFling then pcall(function() local char = LocalPlayer.Character local root = char and char:FindFirstChild("HumanoidRootPart")
-if root then root.RotVelocity = Vector3.new(0, 0, 0)
-for i = 1, #allPlayers do local p = allPlayers[i]
-if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then local pRoot = p.Character.HumanoidRootPart
-if (pRoot.Position - root.Position).Magnitude < 15 then local pKids = p.Character:GetChildren() for j = 1, #pKids do local part = pKids[j] if part:IsA("BasePart") then part.CanCollide = false if part:IsA("Part") or part:IsA("MeshPart") then part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0) end end end end
+if Config.AntiFling then
+pcall(function()
+local char = LocalPlayer.Character
+local root = char and char:FindFirstChild("HumanoidRootPart")
+if root then
+root.RotVelocity = Vector3.new(0, 0, 0)
+local allPlayers = Players:GetPlayers()
+for i = 1, #allPlayers do
+local p = allPlayers[i]
+if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+local pRoot = p.Character.HumanoidRootPart
+if (pRoot.Position - root.Position).Magnitude < 15 then
+local pKids = p.Character:GetChildren()
+for j = 1, #pKids do
+local part = pKids[j]
+if part:IsA("BasePart") then
+part.CanCollide = false
+if part:IsA("Part") or part:IsA("MeshPart") then
+part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
 end
 end
 end
-end) end
+end
+end
+end
+end
+end)
+end
 end
 end)
 task.spawn(function() while task.wait(3) do if Config.FreezeWeather then pcall(ExtremeSkyClean) end end end)
-task.spawn(function() while true do task.wait(10) if Config.MapOptimizeActive then pcall(function() if gcinfo then gcinfo() end local des = Workspace:GetDescendants() local chunk = 150 for i = 1, #des do local item = des[i] if item:IsA("Debris") or item.Name == "Effect" or item.Name == "Bullet" or item.Name == "Laser" then pcall(function() item:Destroy() end) end if i % chunk == 0 then task.wait() end end end) end end end)
+task.spawn(function() while true do task.wait(10) if Config.MapOptimizeActive then pcall(function() if gcinfo then pcall(gcinfo) end local des = Workspace:GetDescendants() local chunk = 150 for i = 1, #des do local item = des[i] if item:IsA("Debris") or item.Name == "Effect" or item.Name == "Bullet" or item.Name == "Laser" then pcall(function() item:Destroy() end) end if i % chunk == 0 then task.wait() end end end) end end end)
 task.spawn(function() while true do task.wait(5) if Config.BHOptimize then pcall(function() local char = LocalPlayer.Character local root = char and char:FindFirstChild("HumanoidRootPart") if root then local des = Workspace:GetDescendants() local chunk = 100 for i = 1, #des do local item = des[i] if item:IsA("BasePart") and not Players:GetPlayerFromCharacter(item.Parent) and item.Name ~= "Baseplate" then local dist = (item.Position - root.Position).Magnitude if dist > 80 then item.Velocity = Vector3.new(0, 0, 0) item.RotVelocity = Vector3.new(0, 0, 0) end end if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") then if item.Parent and item.Parent:IsA("Workspace") then pcall(function() item:Destroy() end) end end if i % chunk == 0 then task.wait() end end end end) end end end)
 local inputConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 if not gameProcessed and input.KeyCode == Enum.KeyCode.K then
