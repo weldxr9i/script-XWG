@@ -149,7 +149,7 @@ local function PurgeMapToBaseplate()
     local items = Workspace:GetChildren() local chunk = 150
     for i = 1, #items do
         local item = items[i] if item ~= Workspace.CurrentCamera and not Players:GetPlayerFromCharacter(item) and item.Name ~= "Baseplate" then pcall(function() item:Destroy() end) end
-        if i % chunk == 0 then task.wait() end
+        if i % chunk == 120 then task.wait() end
     end
 end
 
@@ -169,7 +169,7 @@ loopGradient(sg, 4)
 
 if CONFIG.BG_IMAGE ~= "" then new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0, Image = CONFIG.BG_IMAGE, ImageTransparency = 0.45, ScaleType = Enum.ScaleType.Crop, ZIndex = 1, Parent = main }, { corner(UDim.new(0, 16)) }) end
 
--- [[ زر التوغل العائم المطور ]]
+-- [[ زر التوغل العائم المطور مع جزيئات التلاشي ]]
 local toggleGui = new("ScreenGui", { Name = "WG_Floating_Toggle", ResetOnSpawn = false, DisplayOrder = 101, Parent = GUI_PARENT })
 local floatBtn = new("TextButton", { Name = "ToggleBtn", Size = UDim2.fromOffset(52, 52), Position = UDim2.new(0.02, 0, 0.2, 0), BackgroundTransparency = 1, Text = "", Active = true, ZIndex = 10, Parent = toggleGui })
 makeDraggable(floatBtn)
@@ -182,6 +182,41 @@ loopGradient(floatGrad, 3)
 local floatText = new("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "WG", TextSize = 15, Font = Enum.Font.GothamBlack, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.2, TextStrokeColor3 = rgb(10, 5, 20), ZIndex = 12, Parent = floatBtn })
 local floatTextGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = floatText })
 loopGradient(floatTextGrad, 3)
+local pContainer = new("Frame", { Name = "ParticlesContainer", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 9, Parent = floatBtn })
+local activeParticles = {}
+local maxParticles = 24
+task.spawn(function()
+while floatBtn and floatBtn.Parent do
+local currentTime = os.clock()
+local gradRatio = (currentTime * 0.33) % 1
+local currentEdgeColor = CONFIG.ACCENT:Lerp(CONFIG.ACCENT_2, math.abs(math.sin(gradRatio * math.pi)))
+if #activeParticles < maxParticles and math.random() > 0.3 then
+local angle = math.random() * math.pi * 2
+local startRadius = 24
+local pt = new("Frame", {
+Size = UDim2.fromOffset(math.random(3, 5), math.random(3, 5)),
+BackgroundColor3 = currentEdgeColor,
+BorderSizePixel = 0,
+ZIndex = 9,
+Parent = pContainer
+}, { corner(UDim.new(1, 0)) })
+table.insert(activeParticles, {
+Object = pt, Angle = angle, Radius = startRadius, MaxLife = 1.0 + math.random() * 0.8, Age = 0, Speed = 12 + math.random() * 15, RotSpeed = (math.random() > 0.5 and 1 or -1) * (1 + math.random() * 2)
+})
+end
+for i = #activeParticles, 1, -1 do
+local p = activeParticles[i] p.Age = p.Age + 0.03
+if p.Age >= p.MaxLife then p.Object:Destroy() table.remove(activeParticles, i)
+else
+local progress = p.Age / p.MaxLife p.Radius = p.Radius + (p.Speed * 0.03) p.Angle = p.Angle + (p.RotSpeed * 0.02)
+local pX = math.cos(p.Angle) * p.Radius + 26 local pY = math.sin(p.Angle) * p.Radius + 26
+p.Object.Position = UDim2.fromOffset(pX - (p.Object.AbsoluteSize.X / 2), pY - (p.Object.AbsoluteSize.Y / 2))
+p.Object.BackgroundTransparency = progress p.Object.BackgroundColor3 = currentEdgeColor
+end
+end
+task.wait(0.03)
+end
+end)
 floatBtn.MouseButton1Click:Connect(function()
 main.Visible = not main.Visible
 local targetFrame = CoreGui:FindFirstChild("WG_AntiAFK_Gui") and CoreGui["WG_AntiAFK_Gui"]:FindFirstChildOfClass("Frame")
@@ -283,13 +318,40 @@ local tw = tween(main, 0.25, { Size = UDim2.fromOffset(420, 360) }, Enum.EasingS
 tw.Completed:Connect(function() TabsBar.Visible = true Separator.Visible = true SwitchTab(currentTab) isTweening = false end)
 end
 end)
-local function CreateToggle(text, order, targetFrame, callback)
-local Row = new("Frame", { Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = rgb(15, 15, 15), BackgroundTransparency = 0.4, LayoutOrder = order, ZIndex = 4, Parent = targetFrame }, { corner(UDim.new(0, 4)) })
-local rowStroke = new("UIStroke", { Color = Color3.fromRGB(35, 35, 35), Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = Row })
-new("TextLabel", { Size = UDim2.new(1, -70, 1, 0), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, Text = text, TextColor3 = rgb(200, 200, 200), TextSize = 11, Font = Enum.Font.GothamSemibold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = Row })
-local Btn = new("TextButton", { Size = UDim2.fromOffset(50, 22), Position = UDim2.new(1, -62, 0, 8), BackgroundColor3 = rgb(30, 20, 20), Text = "OFF", TextSize = 10, Font = Enum.Font.GothamBold, TextColor3 = rgb(180, 70, 70), ZIndex = 4, Parent = Row }, { corner(UDim.new(0, 4)) })
+-- [[ دالة التوغل النيون العالمية الموحدة لجميع الخيارات والتبويبات ]]
+local function CreateUniversalToggle(text, order, targetFrame, callback)
+local Row = new("Frame", { Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = rgb(18, 12, 26), BackgroundTransparency = 0.2, LayoutOrder = order, ZIndex = 4, Parent = targetFrame }, { corner(UDim.new(0, 6)) })
+local rStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = Row })
+local rGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = rStroke })
+loopGradient(rGrad, 4)
+new("TextLabel", { Size = UDim2.new(1, -75, 1, 0), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, Text = text, TextColor3 = rgb(240, 235, 245), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = Row })
+-- مسار السويتش الحديث
+local SwitchTrack = new("TextButton", { Size = UDim2.fromOffset(46, 22), Position = UDim2.new(1, -58, 0, 8), BackgroundColor3 = rgb(35, 30, 45), Text = "", ZIndex = 4, Parent = Row }, { corner(UDim.new(1, 0)) })
+-- إضاءة نيون حقيقية تجمع الأبيض والبنفسجي
+local glowLayer = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2.5, Parent = SwitchTrack })
+local glowGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.4, CONFIG.ACCENT_2), kp(0.6, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = glowLayer })
+loopGradient(glowGrad, 2)
+-- مقبض دائري فارغ واحترافي
+local Knob = new("Frame", { Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(2, 2), BackgroundColor3 = rgb(140, 135, 150), ZIndex = 5, Parent = SwitchTrack }, { corner(UDim.new(1, 0)) })
+local knobStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.2, Parent = Knob })
+local knobGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT), kp(1, Color3.new(1, 1, 1)) }), Parent = knobStroke })
+loopGradient(knobGrad, 2)
 local active = false
-Btn.MouseButton1Click:Connect(function() active = not active Btn.Text = active and "ON" or "OFF" Btn.BackgroundColor3 = active and rgb(20, 35, 25) or rgb(30, 20, 20) Btn.TextColor3 = active and rgb(80, 200, 100) or rgb(180, 70, 70) callback(active) end)
+SwitchTrack.MouseButton1Click:Connect(function()
+active = not active
+if active then
+tween(Knob, 0.2, { Position = UDim2.fromOffset(26, 2) })
+tween(SwitchTrack, 0.2, { BackgroundColor3 = CONFIG.ACCENT })
+tween(Knob, 0.2, { BackgroundColor3 = Color3.new(1, 1, 1) })
+glowLayer.Thickness = 3.5
+else
+tween(Knob, 0.2, { Position = UDim2.fromOffset(2, 2) })
+tween(SwitchTrack, 0.2, { BackgroundColor3 = rgb(35, 30, 45) })
+tween(Knob, 0.2, { BackgroundColor3 = rgb(140, 135, 150) })
+glowLayer.Thickness = 2.5
+end
+callback(active)
+end)
 end
 local AntiAfkGui, AfkMainFrame
 local function CreateAntiAfkWindow()
@@ -385,7 +447,7 @@ for username, d in pairs(ServerDatabase) do
 CreatePlayerRow(username, d.UserId) local ui = UIEntries[username]
 if ui then ui.UpdateVisuals(d.IsPresent, d.TrackingDisabled)
 if not d.IsPresent then ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40) ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
-else ui.Indicator.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100) ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds + (os.time() - d.TimeJoined))) end
+else ui.Indicator.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(0, 200, 100) ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds + (os.time() - d.TimeJoined))) end
 end
 end
 end
@@ -411,7 +473,6 @@ table.insert(JanitorConnections, pRemConn)
 local MainInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "👑 " .. CONFIG.CLAN_NAME .. " DEVELOPER PROFILE 👑", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = MainContentFrame })
 local mainG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = MainInfo })
 loopGradient(mainG, 3)
--- زيادة الحجم الطولي للبطاقة السوداء (من 150 لـ 175) لتنزل وتحتوي النص المتوهج بالكامل في الداخل بشكل مثالي
 local ProfileCard = new("Frame", { Size = UDim2.new(1, 0, 0, 175), BackgroundColor3 = rgb(18, 14, 28), BackgroundTransparency = 0.3, LayoutOrder = 2, Parent = MainContentFrame }, { corner(UDim.new(0, 10)) })
 local cardStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ProfileCard })
 local cardG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = cardStroke })
@@ -437,7 +498,6 @@ InstaBtn.MouseButton1Click:Connect(function()
 if setclipboard then setclipboard(CONFIG.INSTA_USER) InstaTip.Text = "✓ Username Copied!" InstaTip.TextColor3 = rgb(80, 220, 100) task.wait(2) if InstaTip and InstaTip.Parent then InstaTip.Text = "Click to copy username" InstaTip.TextColor3 = rgb(180, 170, 200) end
 else InstaTip.Text = "Clipboard not supported!" InstaTip.TextColor3 = rgb(220, 80, 80) end
 end)
--- تم جعل النص تابعًا ومدرجًا كطفل (Child) داخل الـ ProfileCard لتطبيق التموضع الدقيق وحمايته من الخروج عن الحدود السوداء
 local DevTag = new("TextLabel", { Size = UDim2.new(1, -20, 0, 20), Position = UDim2.new(0, 10, 1, -25), BackgroundTransparency = 1, Text = "UI developed by KAi   AKA   XLI7A 7WAY L9WAWID", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.GothamSemibold, TextSize = 11, ZIndex = 5, Parent = ProfileCard })
 local devTagG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = DevTag })
 loopGradient(devTagG, 3)
@@ -445,33 +505,33 @@ loopGradient(devTagG, 3)
 local FpsInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "⚡ " .. CONFIG.CLAN_NAME .. " ENGINE OPTIMIZER ⚡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = FpsContentFrame })
 local fpsTabG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = FpsInfo })
 loopGradient(fpsTabG, 3)
-CreateToggle("Invisible Identity Purge (Names Only)", 1, FpsContentFrame, function(state) Config.PurgeAvatars = state if state then for _, p in ipairs(Players:GetPlayers()) do if p.Character then task.spawn(StripCharacter, p.Character) end end end end)
+CreateUniversalToggle("Invisible Identity Purge (Names Only)", 1, FpsContentFrame, function(state) Config.PurgeAvatars = state if state then for _, p in ipairs(Players:GetPlayers()) do if p.Character then task.spawn(StripCharacter, p.Character) end end end end)
 local pObsConn = Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function(char) if Config.PurgeAvatars then task.spawn(StripCharacter, char) end end) end)
 table.insert(JanitorConnections, pObsConn)
-CreateToggle("Lock Server Time (12 PM) & Weather", 2, FpsContentFrame, function(state) Config.FreezeWeather = state if state then ExtremeSkyClean() end end)
-CreateToggle("Anti-Explosion Shield & Texture", 3, FpsContentFrame, function(state) Config.AntiExplosions = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end)
-CreateToggle("Baseplate Only (Purge Map)", 4, FpsContentFrame, function(state) Config.BaseplateOnly = state if state then PurgeMapToBaseplate() end end)
+CreateUniversalToggle("Lock Server Time (12 PM) & Weather", 2, FpsContentFrame, function(state) Config.FreezeWeather = state if state then ExtremeSkyClean() end end)
+CreateUniversalToggle("Anti-Explosion Shield & Texture", 3, FpsContentFrame, function(state) Config.AntiExplosions = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end)
+CreateUniversalToggle("Baseplate Only (Purge Map)", 4, FpsContentFrame, function(state) Config.BaseplateOnly = state if state then PurgeMapToBaseplate() end end)
 local mapConn = Workspace.ChildAdded:Connect(function() if Config.BaseplateOnly then PurgeMapToBaseplate() end end)
 table.insert(JanitorConnections, mapConn)
-CreateToggle("Ultimate FPS Boost (Smooth Plastic)", 5, FpsContentFrame, function(state) Config.UltimateBoost = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end)
-CreateToggle("Clear Map Effects & Debris", 6, FpsContentFrame, function(state) Config.ClearEffects = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0 then task.wait() end end end) end end)
-CreateToggle("Anti-Sit (No Shake / No-Clip Seats)", 7, FpsContentFrame, function(state) Config.AntiSit = state local char = Players.LocalPlayer.Character if char then ApplyAntiSit(char) end end)
-CreateToggle("Anti-Fling Shield", 8, FpsContentFrame, function(state) Config.AntiFling = state end)
-CreateToggle("God Mode Optimize (+100 FPS Engine)", 9, FpsContentFrame, function(state) Config.Engine100FPS = state if state then pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 if sethiddenproperty then sethiddenproperty(game:GetService("Lighting"), "Technology", Enum.Technology.Compatibility) end end) else pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic end) end end)
-CreateToggle("Auto Map Data Purge (Anti-Memory Leak)", 10, FpsContentFrame, function(state) Config.MapOptimizeActive = state end)
+CreateUniversalToggle("Ultimate FPS Boost (Smooth Plastic)", 5, FpsContentFrame, function(state) Config.UltimateBoost = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end)
+CreateUniversalToggle("Clear Map Effects & Debris", 6, FpsContentFrame, function(state) Config.ClearEffects = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0 then task.wait() end end end) end end)
+CreateUniversalToggle("Anti-Sit (No Shake / No-Clip Seats)", 7, FpsContentFrame, function(state) Config.AntiSit = state local char = Players.LocalPlayer.Character if char then ApplyAntiSit(char) end end)
+CreateUniversalToggle("Anti-Fling Shield", 8, FpsContentFrame, function(state) Config.AntiFling = state end)
+CreateUniversalToggle("God Mode Optimize (+100 FPS Engine)", 9, FpsContentFrame, function(state) Config.Engine100FPS = state if state then pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 if sethiddenproperty then sethiddenproperty(game:GetService("Lighting"), "Technology", Enum.Technology.Compatibility) end end) else pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic end) end end)
+CreateUniversalToggle("Auto Map Data Purge (Anti-Memory Leak)", 10, FpsContentFrame, function(state) Config.MapOptimizeActive = state end)
 -- [[ تبويب SMLA ]]
 local SmlaInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 1, Text = "★ " .. CONFIG.CLAN_NAME .. " REPOSITORY | By: " .. CONFIG.MY_NAME .. " ★", TextColor3 = rgb(255, 255, 255), TextSize = 11, Font = Enum.Font.SourceSansBold, Parent = SmlaContentFrame })
 local smlaG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = SmlaInfo })
 loopGradient(smlaG, 3)
-CreateToggle("Activate Anti-AFK System", 2, SmlaContentFrame, function(state) Config.AntiAFK = state if state then CreateAntiAfkWindow() else if AntiAfkGui then pcall(function() AntiAfkGui:Destroy() end) end end end)
-CreateToggle("Activate Premium Tracker", 3, SmlaContentFrame, function(state) Config.TrackerEnabled = state if state then CreateTrackerWindow() else if TrackerGui then pcall(function() TrackerGui:Destroy() UIEntries = {} ScrollFrame = nil end) end end end)
+CreateUniversalToggle("Activate Anti-AFK System", 2, SmlaContentFrame, function(state) Config.AntiAFK = state if state then CreateAntiAfkWindow() else if AntiAfkGui then pcall(function() AntiAfkGui:Destroy() end) end end end)
+CreateUniversalToggle("Activate Premium Tracker", 3, SmlaContentFrame, function(state) Config.TrackerEnabled = state if state then CreateTrackerWindow() else if TrackerGui then pcall(function() TrackerGui:Destroy() UIEntries = {} ScrollFrame = nil end) end end end)
 -- [[ تبويب CLAN ]]
 local ClanInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "🔥 " .. CONFIG.CLAN_NAME .. " CLAN MULTITOOLS 🔥", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = ClanContentFrame })
 local clanTabG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = ClanInfo })
 loopGradient(clanTabG, 3)
 local SpeedValue = 50
 local isSpeedLoopRunning = false
-CreateToggle(CONFIG.CLAN_NAME .. " Speed Boost", 1, ClanContentFrame, function(state)
+CreateUniversalToggle(CONFIG.CLAN_NAME .. " Speed Boost", 1, ClanContentFrame, function(state)
 Config.SpeedBoost = state
 if state and not isSpeedLoopRunning then isSpeedLoopRunning = true
 task.spawn(function()
@@ -484,9 +544,9 @@ end
 end)
 -- [[ تبويب BROOKHAVEN ]]
 local BhInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "🏡 " .. CONFIG.CLAN_NAME .. " BROOKHAVEN CONTROL 🏡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = BhContentFrame })
-local bhG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = BhInfo })
-loopGradient(bhG, 3)
-CreateToggle("🏡 Auto BH Optimization (Anti-Crash)", 2, BhContentFrame, function(state) Config.BHOptimize = state end)
+local bhGGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = BhInfo })
+loopGradient(bhGGrad, 3)
+CreateUniversalToggle("🏡 Auto BH Optimization (Anti-Crash)", 2, BhContentFrame, function(state) Config.BHOptimize = state end)
 -- [[ معالجة الأحداث واللوب المنفصل المستقر ]]
 local worldObsConn = Workspace.DescendantAdded:Connect(function(item) if Config.AntiExplosions or Config.UltimateBoost or Config.ClearEffects then pcall(OptimizeWorldObject, item) end end)
 local localCharConn = Players.LocalPlayer.CharacterAdded:Connect(function(char) if Config.AntiSit then task.spawn(ApplyAntiSit, char) end end)
