@@ -1,3 +1,4 @@
+-- [[ WAR GODS CLAN MULTITOOLS - PERFECT UI PADDING VERSION ]] --
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local Players          = game:GetService("Players")
@@ -7,7 +8,6 @@ local UserInputService = game:GetService("UserInputService")
 local CoreGui          = game:GetService("CoreGui")
 local Workspace        = game:GetService("Workspace")
 local VirtualUser      = game:GetService("VirtualUser")
-local Debris           = game:GetService("Debris")
 local TextChatService  = game:GetService("TextChatService")
 local LocalPlayer      = Players.LocalPlayer
 
@@ -17,7 +17,9 @@ local CONFIG = {
     BG_IMAGE   = "rbxassetid://125086374911002",
     ACCENT     = Color3.fromRGB(148, 0, 211),
     ACCENT_2   = Color3.fromRGB(255, 60, 200),
-    INSTA_USER = "h04x_jf"   
+    INSTA_USER = "h04x_jf",
+    TOGGLE_IMG = "rbxassetid://120125603923365", 
+    INSTA_ICON = "rbxassetid://95610090491460"   
 }
 
 local rgb = Color3.fromRGB
@@ -33,8 +35,11 @@ end
 local GUI_PARENT = getGuiParent()
 
 if GUI_PARENT:FindFirstChild("WG_LowLag_Hub") then pcall(function() GUI_PARENT["WG_LowLag_Hub"]:Destroy() end) end
+if GUI_PARENT:FindFirstChild("WG_Floating_Toggle") then pcall(function() GUI_PARENT["WG_Floating_Toggle"]:Destroy() end) end
 if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then pcall(function() CoreGui["WG_AntiAFK_Gui"]:Destroy() end) end
 if CoreGui:FindFirstChild("WG_Premium_Tracker") then pcall(function() CoreGui["WG_Premium_Tracker"]:Destroy() end) end
+
+local JanitorConnections = {}
 
 local function new(class, props, children)
     local o = Instance.new(class)
@@ -54,23 +59,32 @@ end
 
 local function loopGradient(g, t)
     g.Offset = Vector2.new(-1, 0)
-    TweenService:Create(g, TweenInfo.new(t, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), { Offset = Vector2.new(1, 0) }):Play()
+    local tw = TweenService:Create(g, TweenInfo.new(t, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), { Offset = Vector2.new(1, 0) })
+    tw:Play()
 end
 
 function makeDraggable(frame)
     local dragging, startPos, startFramePos
-    frame.InputBegan:Connect(function(input)
+    local conn1 = frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging, startPos, startFramePos = true, input.Position, frame.Position
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+            local connEnd
+            connEnd = input.Changed:Connect(function() 
+                if input.UserInputState == Enum.UserInputState.End then 
+                    dragging = false 
+                    connEnd:Disconnect()
+                end 
+            end)
         end
     end)
-    UserInputService.InputChanged:Connect(function(input)
+    local conn2 = UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local d = input.Position - startPos
             frame.Position = UDim2.new(startFramePos.X.Scale, startFramePos.X.Offset + d.X, startFramePos.Y.Scale, startFramePos.Y.Offset + d.Y)
         end
     end)
+    table.insert(JanitorConnections, conn1)
+    table.insert(JanitorConnections, conn2)
 end
 
 local Config = {PurgeAvatars = false, FreezeWeather = false, AntiExplosions = false, BaseplateOnly = false, UltimateBoost = false, ClearEffects = false, AntiSit = false, AntiFling = false, Engine100FPS = false, AntiAFK = false, TrackerEnabled = false, MapOptimizeActive = false, SpeedBoost = false, BHOptimize = false}
@@ -98,6 +112,7 @@ local function StripCharacter(char)
         end 
         cleanObj(desc) 
     end)
+    table.insert(JanitorConnections, childConn)
     if char:FindFirstChildOfClass("Humanoid") then char:FindFirstChildOfClass("Humanoid").DisplayDistanceType = Enum.HumanoidDisplayDistanceType.All end
 end
 
@@ -143,70 +158,79 @@ local function ApplyAntiSit(char)
     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, not Config.AntiSit) if Config.AntiSit and hum.Sit then hum.Sit = false end
 end
 
+-- [[ إنشاء القائمة الرئيسية ]]
 local gui = new("ScreenGui", { Name = "WG_LowLag_Hub", ResetOnSpawn = false, DisplayOrder = 100, Parent = GUI_PARENT })
 local main = new("Frame", { Size = UDim2.fromOffset(420, 360), Position = UDim2.new(0.3, 0, 0.2, 0), BackgroundColor3 = rgb(12, 8, 22), Active = true, Parent = gui }, { corner(UDim.new(0, 16)) })
 makeDraggable(main)
 
 local stroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = main })
 local sg = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = stroke })
-TweenService:Create(sg, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), { Rotation = 360 }):Play()
+loopGradient(sg, 4)
 
 if CONFIG.BG_IMAGE ~= "" then new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0, Image = CONFIG.BG_IMAGE, ImageTransparency = 0.45, ScaleType = Enum.ScaleType.Crop, ZIndex = 1, Parent = main }, { corner(UDim.new(0, 16)) }) end
 
+-- [[ زر التوغل العائم المطور ]]
+local toggleGui = new("ScreenGui", { Name = "WG_Floating_Toggle", ResetOnSpawn = false, DisplayOrder = 101, Parent = GUI_PARENT })
+local floatBtn = new("TextButton", { Name = "ToggleBtn", Size = UDim2.fromOffset(52, 52), Position = UDim2.new(0.02, 0, 0.2, 0), BackgroundTransparency = 1, Text = "", Active = true, ZIndex = 10, Parent = toggleGui })
+makeDraggable(floatBtn)
+
+local floatImg = new("ImageLabel", { Size = UDim2.fromScale(1, 1), Image = CONFIG.TOGGLE_IMG, BackgroundTransparency = 1, ZIndex = 11, Parent = floatBtn }, { corner(UDim.new(1, 0)) })
+local floatStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2.5, Parent = floatImg })
+local floatGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = floatStroke })
+loopGradient(floatGrad, 3)
+
+local floatText = new("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "WG", TextSize = 15, Font = Enum.Font.GothamBlack, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.2, TextStrokeColor3 = rgb(10, 5, 20), ZIndex = 12, Parent = floatBtn })
+local floatTextGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = floatText })
+loopGradient(floatTextGrad, 3)
+floatBtn.MouseButton1Click:Connect(function()
+main.Visible = not main.Visible
+local targetFrame = CoreGui:FindFirstChild("WG_AntiAFK_Gui") and CoreGui["WG_AntiAFK_Gui"]:FindFirstChildOfClass("Frame")
+if targetFrame then targetFrame.Visible = main.Visible end
+local trackerFrame = CoreGui:FindFirstChild("WG_Premium_Tracker") and CoreGui["WG_Premium_Tracker"]:FindFirstChildOfClass("Frame")
+if trackerFrame then trackerFrame.Visible = main.Visible end
+end)
 local Header = new("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, ZIndex = 2, Parent = main })
 local title = new("TextLabel", { Size = UDim2.new(1, -75, 0, 20), Position = UDim2.fromOffset(15, 5), BackgroundTransparency = 1, Text = "★ " .. CONFIG.CLAN_NAME .. " CLAN UI ★", TextSize = 13, Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 4, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header })
 local g = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = title })
 loopGradient(g, 3)
-
--- إرجاع التوقيع الأصلي الثابت والمطلوب بالكامل (kai on top)
 local signatureLabel = new("TextLabel", { Size = UDim2.new(1, -75, 0, 15), Position = UDim2.fromOffset(15, 22), BackgroundTransparency = 1, Text = "kai on top", TextSize = 10, Font = Enum.Font.GothamSemibold, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 4, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header })
 local sigG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = signatureLabel })
 loopGradient(sigG, 3)
-
 local MinBtn = new("TextButton", { Size = UDim2.fromOffset(25, 25), Position = UDim2.new(1, -65, 0, 7), BackgroundTransparency = 1, Text = "-", TextSize = 22, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 5, Parent = Header })
 local minG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = MinBtn })
 loopGradient(minG, 3)
-
 local CloseBtn = new("TextButton", { Size = UDim2.fromOffset(25, 25), Position = UDim2.new(1, -35, 0, 7), BackgroundTransparency = 1, Text = "X", TextSize = 14, Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 5, Parent = Header })
 local closeG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = CloseBtn })
 loopGradient(closeG, 3)
-CloseBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+CloseBtn.MouseButton1Click:Connect(function()
+for _, conn in ipairs(JanitorConnections) do if conn.Disconnect then pcall(function() conn:Disconnect() end) end end
+if toggleGui then toggleGui:Destroy() end
+if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then pcall(function() CoreGui["WG_AntiAFK_Gui"]:Destroy() end) end
+if CoreGui:FindFirstChild("WG_Premium_Tracker") then pcall(function() CoreGui["WG_Premium_Tracker"]:Destroy() end) end
+gui:Destroy()
+end)
 local FPSLabel = new("TextLabel", { Size = UDim2.new(1, -30, 0, 25), Position = UDim2.fromOffset(15, 42), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = main })
 local fpsG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = FPSLabel })
 loopGradient(fpsG, 3)
 task.spawn(function()
 local lastUpdate, frameCount = os.clock(), 0
-RunService.RenderStepped:Connect(function()
+local fpsConn = RunService.RenderStepped:Connect(function()
 frameCount = frameCount + 1 local now = os.clock() local delta = now - lastUpdate
 if delta >= 1.0 then local cur = math.round(frameCount / delta) frameCount, lastUpdate = 0, now
 local txt = "[MODERATE]" if cur >= 55 then txt = "[EXCELLENT]" elseif cur < 30 then txt = "[LAGGING]" end
 FPSLabel.Text = string.format("FPS: %d | Status: %s", cur, txt)
 end
 end)
+table.insert(JanitorConnections, fpsConn)
 end)
-local TabsBar = new("ScrollingFrame", {
-Size = UDim2.new(1, -30, 0, 32),
-Position = UDim2.fromOffset(15, 68),
-BackgroundTransparency = 1,
-ScrollBarThickness = 0,
-ScrollingDirection = Enum.ScrollingDirection.X,
-CanvasSize = UDim2.new(0, 470, 0, 0),
-ClipsDescendants = true,
-ZIndex = 6,
-Parent = main
-})
-local TabsLayout = new("UIListLayout", {
-FillDirection = Enum.FillDirection.Horizontal,
-HorizontalAlignment = Enum.HorizontalAlignment.Left,
-VerticalAlignment = Enum.VerticalAlignment.Center,
-Padding = UDim.new(0, 6),
-SortOrder = Enum.SortOrder.LayoutOrder,
-Parent = TabsBar
-})
+local TabsBar = new("ScrollingFrame", { Size = UDim2.new(1, -30, 0, 32), Position = UDim2.fromOffset(15, 68), BackgroundTransparency = 1, ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.X, CanvasSize = UDim2.new(0, 470, 0, 0), ClipsDescendants = true, ZIndex = 6, Parent = main })
+local TabsLayout = new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Left, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = TabsBar })
 local Separator = new("Frame", { Position = UDim2.fromOffset(15, 104), Size = UDim2.new(1, -30, 0, 1), BackgroundColor3 = Color3.fromRGB(45, 45, 45), BorderSizePixel = 0, ZIndex = 4, Parent = main })
 local TabPages, currentTab, TabButtons = {}, "Main", {}
+-- تم تعديل الدالة لتقوم بحساب الـ الحجم كاملاً بالبكسل مع فرض حماية إجبارية عبر UIPadding لمنع تداخل الحواف نهائياً مع الإطار الأيسر والأيمن
 local function CreateTabContentFrame(name, visible)
-local sf = new("ScrollingFrame", { Size = UDim2.new(1, -20, 1, -125), Position = UDim2.fromOffset(10, 114), BackgroundTransparency = 1, CanvasSize = UDim2.new(0, 0, 0, 420), ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(45, 45, 45), ZIndex = 4, Parent = main, ClipsDescendants = true, Visible = visible })
+local sf = new("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -125), Position = UDim2.fromOffset(0, 114), BackgroundTransparency = 1, CanvasSize = UDim2.new(0, 0, 0, 420), ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(45, 45, 45), ZIndex = 4, Parent = main, ClipsDescendants = true, Visible = visible })
+local padding = new("UIPadding", { PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), Parent = sf }) -- الفراغ الداخلي الإجباري الحامي للحواف
 local list = new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = sf })
 list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() sf.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 15) end)
 TabPages[name] = sf return sf
@@ -257,16 +281,11 @@ for _, v in pairs(TabPages) do v.Visible = false end TabsBar.Visible, Separator.
 local tw = tween(main, 0.25, { Size = UDim2.fromOffset(420, 72) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) tw.Completed:Connect(function() isTweening = false end)
 else
 local tw = tween(main, 0.25, { Size = UDim2.fromOffset(420, 360) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-tw.Completed:Connect(function()
-TabsBar.Visible = true
-Separator.Visible = true
-SwitchTab(currentTab)
-isTweening = false
-end)
+tw.Completed:Connect(function() TabsBar.Visible = true Separator.Visible = true SwitchTab(currentTab) isTweening = false end)
 end
 end)
 local function CreateToggle(text, order, targetFrame, callback)
-local Row = new("Frame", { Size = UDim2.new(1, -10, 0, 38), BackgroundColor3 = rgb(15, 15, 15), BackgroundTransparency = 0.4, LayoutOrder = order, ZIndex = 4, Parent = targetFrame }, { corner(UDim.new(0, 4)) })
+local Row = new("Frame", { Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = rgb(15, 15, 15), BackgroundTransparency = 0.4, LayoutOrder = order, ZIndex = 4, Parent = targetFrame }, { corner(UDim.new(0, 4)) })
 local rowStroke = new("UIStroke", { Color = Color3.fromRGB(35, 35, 35), Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = Row })
 new("TextLabel", { Size = UDim2.new(1, -70, 1, 0), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, Text = text, TextColor3 = rgb(200, 200, 200), TextSize = 11, Font = Enum.Font.GothamSemibold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = Row })
 local Btn = new("TextButton", { Size = UDim2.fromOffset(50, 22), Position = UDim2.new(1, -62, 0, 8), BackgroundColor3 = rgb(30, 20, 20), Text = "OFF", TextSize = 10, Font = Enum.Font.GothamBold, TextColor3 = rgb(180, 70, 70), ZIndex = 4, Parent = Row }, { corner(UDim.new(0, 4)) })
@@ -305,13 +324,9 @@ local Stats = new("TextLabel", { Size = UDim2.new(1, -115, 0, 16), Position = UD
 local Ind = new("Frame", { Size = UDim2.new(0, 3, 1, -16), Position = UDim2.new(1, -10, 0, 8), BackgroundColor3 = Color3.fromRGB(0, 200, 100), BorderSizePixel = 0, ZIndex = 3, Parent = Row }, { corner(UDim.new(1, 0)) })
 local Toggle = new("TextButton", { Size = UDim2.fromOffset(45, 24), Position = UDim2.new(1, -65, 0, 15), BackgroundColor3 = rgb(20, 40, 25), Text = "ON", TextSize = 11, TextColor3 = rgb(100, 255, 100), Font = Enum.Font.GothamBold, ZIndex = 3, Parent = Row }, { corner(UDim.new(0, 4)) })
 local function UpdateToggleVisuals(isPresent, isDisabled)
-if isDisabled then
-Toggle.Text = "OFF" Toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40) Toggle.TextColor3 = Color3.fromRGB(150, 150, 150)
-elseif not isPresent then
-Toggle.Text = "OUT" Toggle.BackgroundColor3 = Color3.fromRGB(50, 15, 15) Toggle.TextColor3 = Color3.fromRGB(255, 70, 70)
-else
-Toggle.Text = "ON" Toggle.BackgroundColor3 = Color3.fromRGB(20, 40, 25) Toggle.TextColor3 = Color3.fromRGB(100, 255, 100)
-end
+if isDisabled then Toggle.Text = "OFF" Toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40) Toggle.TextColor3 = Color3.fromRGB(150, 150, 150)
+elseif not isPresent then Toggle.Text = "OUT" Toggle.BackgroundColor3 = Color3.fromRGB(50, 15, 15) Toggle.TextColor3 = Color3.fromRGB(255, 70, 70)
+else Toggle.Text = "ON" Toggle.BackgroundColor3 = Color3.fromRGB(20, 40, 25) Toggle.TextColor3 = Color3.fromRGB(100, 255, 100) end
 end
 Toggle.MouseButton1Click:Connect(function()
 local d = ServerDatabase[username]
@@ -322,14 +337,8 @@ if d.TrackingDisabled then
 if d.IsPresent then d.PastSeconds = d.PastSeconds + (os.time() - d.TimeJoined) end
 Stats.Text = "TRACKING DISABLED"
 else
-if d.IsPresent then
-d.TimeJoined = os.time()
-Stats.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
-Ind.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100)
-else
-Stats.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
-Ind.BackgroundColor3 = Color3.fromRGB(255, 40, 40)
-end
+if d.IsPresent then d.TimeJoined = os.time() Stats.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds)) Ind.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100)
+else Stats.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds)) Ind.BackgroundColor3 = Color3.fromRGB(255, 40, 40) end
 end
 end
 end)
@@ -370,119 +379,80 @@ for name, ui in pairs(UIEntries) do ui.Frame.Visible = (currentSearchText == "" 
 end)
 TrackerMinBtn.MouseButton1Click:Connect(function()
 if isTrackerTweening then return end isTrackerTweening = true trackerMinimized = not trackerMinimized TrackerMinBtn.Text = trackerMinimized and "+" or "-"
-if trackerMinimized then
-ScrollFrame.Visible = false TrackerSearchBox.Visible = false Divider.Visible = false
-local tw = tween(TrackerMainFrame, 0.25, { Size = UDim2.fromOffset(460, 72) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) tw.Completed:Connect(function() isTrackerTweening = false end)
-else
-local tw = tween(TrackerMainFrame, 0.25, { Size = UDim2.fromOffset(460, 420) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-tw.Completed:Connect(function() ScrollFrame.Visible = true TrackerSearchBox.Visible = true Divider.Visible = true isTrackerTweening = false end)
-end
+if trackerMinimized then ScrollFrame.Visible = false TrackerSearchBox.Visible = false Divider.Visible = false local tw = tween(TrackerMainFrame, 0.25, { Size = UDim2.fromOffset(460, 72) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) tw.Completed:Connect(function() isTrackerTweening = false end)
+else local tw = tween(TrackerMainFrame, 0.25, { Size = UDim2.fromOffset(460, 420) }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) tw.Completed:Connect(function() ScrollFrame.Visible = true TrackerSearchBox.Visible = true Divider.Visible = true isTrackerTweening = false end) end
 end)
 for username, d in pairs(ServerDatabase) do
-CreatePlayerRow(username, d.UserId)
-local ui = UIEntries[username]
-if ui then
-ui.UpdateVisuals(d.IsPresent, d.TrackingDisabled)
-if not d.IsPresent then
-ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40)
-ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
-else
-ui.Indicator.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100)
-ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds + (os.time() - d.TimeJoined)))
-end
+CreatePlayerRow(username, d.UserId) local ui = UIEntries[username]
+if ui then ui.UpdateVisuals(d.IsPresent, d.TrackingDisabled)
+if not d.IsPresent then ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40) ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
+else ui.Indicator.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100) ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds + (os.time() - d.TimeJoined))) end
 end
 end
 end
 local function SetupTrackerLogic(p, isNew)
-if not p then return end
-local d = ServerDatabase[p.Name]
+if not p then return end local d = ServerDatabase[p.Name]
 ServerDatabase[p.Name] = {UserId = p.UserId, TimeJoined = os.time(), PastSeconds = d and d.PastSeconds or 0, JoinsCount = d and (d.JoinsCount+1) or 1, LeavesCount = d and d.LeavesCount or 0, IsPresent = true, Status = isNew and "rj3" or "active", TrackingDisabled = d and d.TrackingDisabled or false}
 if isNew then print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " دخل السيرفر!") end
-if ScrollFrame then
-CreatePlayerRow(p.Name, p.UserId)
-local ui = UIEntries[p.Name]
-if ui then ui.UpdateVisuals(true, ServerDatabase[p.Name].TrackingDisabled) end
-end
-if isNew then task.spawn(function() task.wait(3) local cur = ServerDatabase[p.Name] if cur and cur.IsPresent and not cur.TrackingDisabled then cur.Status = "active" end end) end
+if ScrollFrame then CreatePlayerRow(p.Name, p.UserId) local ui = UIEntries[p.Name] if ui then ui.UpdateVisuals(true, ServerDatabase[p.Name].TrackingDisabled) end end
+if isNew then task.spawn(function() task.wait(3) local cur = ServerDatabase[p.Name] if cur and cur.IsPresent and not cur.TrackingDisabled_ then cur.Status = "active" end end) end
 end
 for _, p in pairs(Players:GetPlayers()) do SetupTrackerLogic(p, false) end
-Players.PlayerAdded:Connect(function(p) SetupTrackerLogic(p, true) end)
-Players.PlayerRemoving:Connect(function(p)
+local pAddConn = Players.PlayerAdded:Connect(function(p) SetupTrackerLogic(p, true) end)
+local pRemConn = Players.PlayerRemoving:Connect(function(p)
 local d, ui = ServerDatabase[p.Name], UIEntries[p.Name]
-if d and d.IsPresent then
-d.IsPresent = false
-print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " غادر السيرفر!")
-d.LeavesCount, d.Status = d.LeavesCount + 1, "w333 hrb"
-if not d.TrackingDisabled then
-d.PastSeconds = d.PastSeconds + (os.time() - d.TimeJoined)
-end
-if ui then
-ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40)
-ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
-ui.UpdateVisuals(false, d.TrackingDisabled)
-end
+if d and d.IsPresent then d.IsPresent = false print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " غادر السيرفر!") d.LeavesCount, d.Status = d.LeavesCount + 1, "w333 hrb"
+if not d.TrackingDisabled then d.PastSeconds = d.PastSeconds + (os.time() - d.TimeJoined) end
+if ui then ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40) ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds)) ui.UpdateVisuals(false, d.TrackingDisabled) end
 end
 end)
+table.insert(JanitorConnections, pAddConn)
+table.insert(JanitorConnections, pRemConn)
 -- [[ تبويب MAIN ]]
-local MainInfo = new("TextLabel", { Size = UDim2.new(1, -10, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "👑 " .. CONFIG.CLAN_NAME .. " DEVELOPER PROFILE 👑", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = MainContentFrame })
-local mainG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = MainInfo })
+local MainInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "👑 " .. CONFIG.CLAN_NAME .. " DEVELOPER PROFILE 👑", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = MainContentFrame })
+local mainG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = MainInfo })
 loopGradient(mainG, 3)
-local ProfileCard = new("Frame", { Size = UDim2.new(1, -10, 0, 150), BackgroundColor3 = rgb(18, 14, 28), BackgroundTransparency = 0.3, LayoutOrder = 2, Parent = MainContentFrame }, { corner(UDim.new(0, 10)) })
+-- تم ضبط الحجم ليكون متوافقاً 100% مع البادئة الإجبارية الجديدة دون أي التواء أو التفاف
+local ProfileCard = new("Frame", { Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = rgb(18, 14, 28), BackgroundTransparency = 0.3, LayoutOrder = 2, Parent = MainContentFrame }, { corner(UDim.new(0, 10)) })
 local cardStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ProfileCard })
 local cardG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = cardStroke })
 loopGradient(cardG, 4)
--- 1. صورة بروفايل Roblox الفعلي لـ weldxr9i
 local RobloxImg = new("ImageLabel", { Size = UDim2.fromOffset(50, 50), Position = UDim2.fromOffset(25, 20), BackgroundColor3 = rgb(25, 20, 35), Parent = ProfileCard }, { corner(UDim.new(1, 0)) })
-new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 2, Parent = RobloxImg })
-task.spawn(function()
-pcall(function()
-local targetId = Players:GetUserIdFromNameAsync(CONFIG.MY_NAME)
-local thumb = Players:GetUserThumbnailAsync(targetId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
-RobloxImg.Image = thumb
-end)
-end)
-local RobloxName = new("TextLabel", { Size = UDim2.new(0, 250, 0, 20), Position = UDim2.fromOffset(90, 23), BackgroundTransparency = 1, Text = "Roblox: " .. CONFIG.MY_NAME, TextColor3 = rgb(255, 255, 255), Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = ProfileCard })
--- 2. صورة بروفايل Instagram (تم سحب صورة حسابك الحقيقية في روبلوكس لتوضع بداخلها كبديل مرئي متناسق مع الواجهة)
+local robloxStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = RobloxImg })
+local robloxG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = robloxStroke })
+loopGradient(robloxG, 3)
+task.spawn(function() pcall(function() local targetId = Players:GetUserIdFromNameAsync(CONFIG.MY_NAME) local thumb = Players:GetUserThumbnailAsync(targetId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48) RobloxImg.Image = thumb end) end)
+local RobloxName = new("TextLabel", { Size = UDim2.new(0, 250, 0, 20), Position = UDim2.fromOffset(90, 23), BackgroundTransparency = 1, Text = "Roblox: " .. CONFIG.MY_NAME, TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = ProfileCard })
+local robloxTextG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = RobloxName })
+loopGradient(robloxTextG, 3)
 local InstaBtn = new("TextButton", { Size = UDim2.new(1, -20, 0, 60), Position = UDim2.fromOffset(10, 80), BackgroundTransparency = 1, Text = "", ZIndex = 4, Parent = ProfileCard })
-local InstaImg = new("ImageLabel", { Size = UDim2.fromOffset(50, 50), Position = UDim2.fromOffset(15, 5), BackgroundColor3 = rgb(25, 20, 35), ZIndex = 5, Parent = InstaBtn }, { corner(UDim.new(1, 0)) })
-new("UIStroke", { Color = CONFIG.ACCENT, Thickness = 2, Parent = InstaImg })
-task.spawn(function()
-pcall(function()
-local targetId = Players:GetUserIdFromNameAsync(CONFIG.MY_NAME)
-local thumb = Players:GetUserThumbnailAsync(targetId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
-InstaImg.Image = thumb
-end)
-end)
-local InstaName = new("TextLabel", { Size = UDim2.new(0, 250, 0, 20), Position = UDim2.fromOffset(80, 8), BackgroundTransparency = 1, Text = "Instagram: @" .. CONFIG.INSTA_USER, TextColor3 = rgb(255, 60, 150), Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 5, Parent = InstaBtn })
-local instaG = new("UIGradient", { Color = ColorSequence.new({ kp(0, rgb(255, 60, 150)), kp(1, rgb(255, 150, 60)) }), Parent = InstaName })
-local InstaTip = new("TextLabel", { Size = UDim2.new(0, 250, 0, 14), Position = UDim2.fromOffset(80, 26), BackgroundTransparency = 1, Text = "Click to copy username", TextColor3 = rgb(120, 120, 135), Font = Enum.Font.GothamSemibold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 5, Parent = InstaBtn })
+local InstaImg = new("ImageLabel", { Size = UDim2.fromOffset(50, 50), Position = UDim2.fromOffset(15, 5), Image = CONFIG.INSTA_ICON, BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop, ZIndex = 5, Parent = InstaBtn }, { corner(UDim.new(1, 0)) })
+local instaStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = InstaImg })
+local instaGFrame = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = instaStroke })
+loopGradient(instaGFrame, 3)
+local InstaName = new("TextLabel", { Size = UDim2.new(0, 250, 0, 20), Position = UDim2.fromOffset(80, 8), BackgroundTransparency = 1, Text = "Instagram: @" .. CONFIG.INSTA_USER, TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 5, Parent = InstaBtn })
+local instaG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = InstaName })
+loopGradient(instaG, 3)
+local InstaTip = new("TextLabel", { Size = UDim2.new(0, 250, 0, 14), Position = UDim2.fromOffset(80, 26), BackgroundTransparency = 1, Text = "Click to copy username", TextColor3 = rgb(180, 170, 200), Font = Enum.Font.GothamSemibold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 5, Parent = InstaBtn })
 InstaBtn.MouseButton1Click:Connect(function()
-if setclipboard then
-setclipboard(CONFIG.INSTA_USER)
-InstaTip.Text = "✓ Username Copied!"
-InstaTip.TextColor3 = rgb(80, 220, 100)
-task.wait(2)
-if InstaTip and InstaTip.Parent then
-InstaTip.Text = "Click to copy username"
-InstaTip.TextColor3 = rgb(120, 120, 135)
-end
-else
-InstaTip.Text = "Clipboard not supported!"
-InstaTip.TextColor3 = rgb(220, 80, 80)
-end
+if setclipboard then setclipboard(CONFIG.INSTA_USER) InstaTip.Text = "✓ Username Copied!" InstaTip.TextColor3 = rgb(80, 220, 100) task.wait(2) if InstaTip and InstaTip.Parent then InstaTip.Text = "Click to copy username" InstaTip.TextColor3 = rgb(180, 170, 200) end
+else InstaTip.Text = "Clipboard not supported!" InstaTip.TextColor3 = rgb(220, 80, 80) end
 end)
--- نص توقيع المطور أسفل الكارد
-local DevTag = new("TextLabel", { Size = UDim2.new(1, -10, 0, 20), LayoutOrder = 3, BackgroundTransparency = 1, Text = "★ UI Framework Developed by Kai ★", TextColor3 = CONFIG.ACCENT_2, Font = Enum.Font.GothamSemibold, TextSize = 11, Parent = MainContentFrame })
+local DevTag = new("TextLabel", { Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 3, BackgroundTransparency = 1, Text = "★ UI Framework Developed by Kai ★", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamSemibold, TextSize = 11, Parent = MainContentFrame })
+local devTagG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = DevTag })
+loopGradient(devTagG, 3)
 -- [[ تبويب ENGINE ]]
-local FpsInfo = new("TextLabel", { Size = UDim2.new(1, -10, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "⚡ " .. CONFIG.CLAN_NAME .. " ENGINE OPTIMIZER ⚡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = FpsContentFrame })
+local FpsInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "⚡ " .. CONFIG.CLAN_NAME .. " ENGINE OPTIMIZER ⚡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = FpsContentFrame })
 local fpsTabG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = FpsInfo })
 loopGradient(fpsTabG, 3)
 CreateToggle("Invisible Identity Purge (Names Only)", 1, FpsContentFrame, function(state) Config.PurgeAvatars = state if state then for _, p in ipairs(Players:GetPlayers()) do if p.Character then task.spawn(StripCharacter, p.Character) end end end end)
-Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function(char) if Config.PurgeAvatars then task.spawn(StripCharacter, char) end end) end)
+local pObsConn = Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function(char) if Config.PurgeAvatars then task.spawn(StripCharacter, char) end end) end)
+table.insert(JanitorConnections, pObsConn)
 CreateToggle("Lock Server Time (12 PM) & Weather", 2, FpsContentFrame, function(state) Config.FreezeWeather = state if state then ExtremeSkyClean() end end)
 CreateToggle("Anti-Explosion Shield & Texture", 3, FpsContentFrame, function(state) Config.AntiExplosions = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end)
 CreateToggle("Baseplate Only (Purge Map)", 4, FpsContentFrame, function(state) Config.BaseplateOnly = state if state then PurgeMapToBaseplate() end end)
-Workspace.ChildAdded:Connect(function() if Config.BaseplateOnly then PurgeMapToBaseplate() end end)
+local mapConn = Workspace.ChildAdded:Connect(function() if Config.BaseplateOnly then PurgeMapToBaseplate() end end)
+table.insert(JanitorConnections, mapConn)
 CreateToggle("Ultimate FPS Boost (Smooth Plastic)", 5, FpsContentFrame, function(state) Config.UltimateBoost = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end)
 CreateToggle("Clear Map Effects & Debris", 6, FpsContentFrame, function(state) Config.ClearEffects = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0 then task.wait() end end end) end end)
 CreateToggle("Anti-Sit (No Shake / No-Clip Seats)", 7, FpsContentFrame, function(state) Config.AntiSit = state local char = Players.LocalPlayer.Character if char then ApplyAntiSit(char) end end)
@@ -490,182 +460,84 @@ CreateToggle("Anti-Fling Shield", 8, FpsContentFrame, function(state) Config.Ant
 CreateToggle("God Mode Optimize (+100 FPS Engine)", 9, FpsContentFrame, function(state) Config.Engine100FPS = state if state then pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 if sethiddenproperty then sethiddenproperty(game:GetService("Lighting"), "Technology", Enum.Technology.Compatibility) end end) else pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic end) end end)
 CreateToggle("Auto Map Data Purge (Anti-Memory Leak)", 10, FpsContentFrame, function(state) Config.MapOptimizeActive = state end)
 -- [[ تبويب SMLA ]]
-local SmlaInfo = new("TextLabel", { Size = UDim2.new(1, -10, 0, 30), BackgroundTransparency = 1, LayoutOrder = 1, Text = "★ " .. CONFIG.CLAN_NAME .. " REPOSITORY | By: " .. CONFIG.MY_NAME .. " ★", TextColor3 = rgb(255, 255, 255), TextSize = 11, Font = Enum.Font.SourceSansBold, Parent = SmlaContentFrame })
+local SmlaInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 1, Text = "★ " .. CONFIG.CLAN_NAME .. " REPOSITORY | By: " .. CONFIG.MY_NAME .. " ★", TextColor3 = rgb(255, 255, 255), TextSize = 11, Font = Enum.Font.SourceSansBold, Parent = SmlaContentFrame })
 local smlaG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = SmlaInfo })
 loopGradient(smlaG, 3)
-CreateToggle("Activate Anti-AFK System", 2, SmlaContentFrame, function(state)
-Config.AntiAFK = state
-if state then CreateAntiAfkWindow() else if AntiAfkGui then pcall(function() AntiAfkGui:Destroy() end) end end
-end)
-CreateToggle("Activate Premium Tracker", 3, SmlaContentFrame, function(state)
-Config.TrackerEnabled = state
-if state then CreateTrackerWindow()
-else if TrackerGui then pcall(function() TrackerGui:Destroy() UIEntries = {} ScrollFrame = nil end) end end
-end)
+CreateToggle("Activate Anti-AFK System", 2, SmlaContentFrame, function(state) Config.AntiAFK = state if state then CreateAntiAfkWindow() else if AntiAfkGui then pcall(function() AntiAfkGui:Destroy() end) end end end)
+CreateToggle("Activate Premium Tracker", 3, SmlaContentFrame, function(state) Config.TrackerEnabled = state if state then CreateTrackerWindow() else if TrackerGui then pcall(function() TrackerGui:Destroy() UIEntries = {} ScrollFrame = nil end) end end end)
 -- [[ تبويب CLAN ]]
-local ClanInfo = new("TextLabel", { Size = UDim2.new(1, -10, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "🔥 " .. CONFIG.CLAN_NAME .. " CLAN MULTITOOLS 🔥", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = ClanContentFrame })
+local ClanInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "🔥 " .. CONFIG.CLAN_NAME .. " CLAN MULTITOOLS 🔥", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = ClanContentFrame })
 local clanTabG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = ClanInfo })
 loopGradient(clanTabG, 3)
 local SpeedValue = 50
 local isSpeedLoopRunning = false
 CreateToggle(CONFIG.CLAN_NAME .. " Speed Boost", 1, ClanContentFrame, function(state)
 Config.SpeedBoost = state
-if state and not isSpeedLoopRunning then
-isSpeedLoopRunning = true
+if state and not isSpeedLoopRunning then isSpeedLoopRunning = true
 task.spawn(function()
-while Config.SpeedBoost do
-task.wait()
-pcall(function()
-local char = LocalPlayer.Character
-if char then
-local hum = char:FindFirstChildOfClass("Humanoid")
-local root = char:FindFirstChild("HumanoidRootPart")
-if hum and root and hum.MoveDirection.Magnitude > 0 then
-root.CFrame = root.CFrame + (hum.MoveDirection * (SpeedValue / 100))
-end
-end
-end)
+while Config.SpeedBoost do task.wait()
+pcall(function() local char = LocalPlayer.Character local hum = char and char:FindFirstChildOfClass("Humanoid") local root = char and char:FindFirstChild("HumanoidRootPart") if hum and root and hum.MoveDirection.Magnitude > 0 then root.CFrame = root.CFrame + (hum.MoveDirection * (SpeedValue / 100)) end end)
 end
 isSpeedLoopRunning = false
 end)
 end
 end)
 -- [[ تبويب BROOKHAVEN ]]
-local BhInfo = new("TextLabel", { Size = UDim2.new(1, -10, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "🏡 " .. CONFIG.CLAN_NAME .. " BROOKHAVEN CONTROL 🏡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = BhContentFrame })
+local BhInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "🏡 " .. CONFIG.CLAN_NAME .. " BROOKHAVEN CONTROL 🏡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = BhContentFrame })
 local bhG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = BhInfo })
 loopGradient(bhG, 3)
-CreateToggle("🏡 Auto BH Optimization (Anti-Crash)", 2, BhContentFrame, function(state)
-Config.BHOptimize = state
-end)
-Workspace.DescendantAdded:Connect(function(item) if Config.AntiExplosions or Config.UltimateBoost or Config.ClearEffects then pcall(OptimizeWorldObject, item) end end)
-Players.LocalPlayer.CharacterAdded:Connect(function(char) if Config.AntiSit then task.spawn(ApplyAntiSit, char) end end)
-LocalPlayer.Idled:Connect(function()
-if Config.AntiAFK then pcall(function() VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame) task.wait(1) VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame) end) end
-end)
-local fixedAmbient = rgb(128, 128, 128)
+CreateToggle("🏡 Auto BH Optimization (Anti-Crash)", 2, BhContentFrame, function(state) Config.BHOptimize = state end)
+-- [[ معالجة الأحداث واللوب المنفصل المستقر ]]
+local worldObsConn = Workspace.DescendantAdded:Connect(function(item) if Config.AntiExplosions or Config.UltimateBoost or Config.ClearEffects then pcall(OptimizeWorldObject, item) end end)
+local localCharConn = Players.LocalPlayer.CharacterAdded:Connect(function(char) if Config.AntiSit then task.spawn(ApplyAntiSit, char) end end)
+local idleConn = LocalPlayer.Idled:Connect(function() if Config.AntiAFK then pcall(function() VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame) task.wait(1) VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame) end) end end)
+table.insert(JanitorConnections, worldObsConn)
+table.insert(JanitorConnections, localCharConn)
+table.insert(JanitorConnections, idleConn)
 task.spawn(function()
-while true do
-task.wait(0.1)
-if Config.AntiFling then
-pcall(function()
-local char = LocalPlayer.Character
-local root = char and char:FindFirstChild("HumanoidRootPart")
-if root then
-root.RotVelocity = Vector3.new(0, 0, 0)
-local allPlayers = Players:GetPlayers()
-for i = 1, #allPlayers do
-local p = allPlayers[i]
-if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-local pRoot = p.Character.HumanoidRootPart
-if (pRoot.Position - root.Position).Magnitude < 15 then
-local pKids = p.Character:GetChildren()
-for j = 1, #pKids do
-local part = pKids[j]
-if part:IsA("BasePart") then
-part.CanCollide = false
-if part:IsA("Part") or part:IsA("MeshPart") then
-part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-end
-end
-end
-end
-end
-end
-end
-end)
-end
-end
-end)
-RunService.Heartbeat:Connect(function()
-if Config.FreezeWeather then pcall(function() local Lighting = game:GetService("Lighting") Lighting.ClockTime, Lighting.GlobalShadows, Lighting.ShadowSoftness, Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.FogEnd = 12, false, 0, fixedAmbient, fixedAmbient, 999999 end) end
-local char = LocalPlayer.Character
-if char then
-local hum = char:FindFirstChildOfClass("Humanoid")
-if Config.AntiSit and hum then if hum.Sit then hum.Sit = false end hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false) end
-end
+while true do task.wait(1)
 if Config.TrackerEnabled and ScrollFrame then
-for name, d in pairs(ServerDatabase) do
-local ui = UIEntries[name]
+for name, d in pairs(ServerDatabase) do local ui = UIEntries[name]
 if ui and d.IsPresent and not d.TrackingDisabled then
 ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds + (os.time() - d.TimeJoined)))
 end
 end
 end
+end
+end)
+local fixedAmbient = rgb(128, 128, 128)
+local mainHeartbeat = RunService.Heartbeat:Connect(function()
+if Config.FreezeWeather then pcall(function() local Lighting = game:GetService("Lighting") Lighting.ClockTime, Lighting.GlobalShadows, Lighting.ShadowSoftness, Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.FogEnd = 12, false, 0, fixedAmbient, fixedAmbient, 999999 end) end
+local char = LocalPlayer.Character local hum = char and char:FindFirstChildOfClass("Humanoid")
+if Config.AntiSit and hum then if hum.Sit then hum.Sit = false end hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false) end
+end)
+table.insert(JanitorConnections, mainHeartbeat)
+task.spawn(function()
+local allPlayers = Players:GetPlayers()
+while true do task.wait(0.2)
+if Config.AntiFling then pcall(function() local char = LocalPlayer.Character local root = char and char:FindFirstChild("HumanoidRootPart")
+if root then root.RotVelocity = Vector3.new(0, 0, 0)
+for i = 1, #allPlayers do local p = allPlayers[i]
+if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then local pRoot = p.Character.HumanoidRootPart
+if (pRoot.Position - root.Position).Magnitude < 15 then local pKids = p.Character:GetChildren() for j = 1, #pKids do local part = pKids[j] if part:IsA("BasePart") then part.CanCollide = false if part:IsA("Part") or part:IsA("MeshPart") then part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0) end end end end
+end
+end
+end
+end) end
+end
 end)
 task.spawn(function() while task.wait(3) do if Config.FreezeWeather then pcall(ExtremeSkyClean) end end end)
-task.spawn(function()
-while true do
-task.wait(10)
-if Config.MapOptimizeActive then
-pcall(function()
-if gcinfo then gcinfo() end
-local des = Workspace:GetDescendants() local chunk = 150
-for i = 1, #des do
-local item = des[i]
-if item:IsA("Debris") or item.Name == "Effect" or item.Name == "Bullet" or item.Name == "Laser" then
-pcall(function() item:Destroy() end)
-end
-if i % chunk == 0 then task.wait() end
-end
-end)
-end
-end
-end)
-task.spawn(function()
-while true do
-task.wait(5)
-if Config.BHOptimize then
-pcall(function()
-local char = LocalPlayer.Character
-local root = char and char:FindFirstChild("HumanoidRootPart")
-if root then
-local des = Workspace:GetDescendants() local chunk = 100
-for i = 1, #des do
-local item = des[i]
-if item:IsA("BasePart") and not Players:GetPlayerFromCharacter(item.Parent) and item.Name ~= "Baseplate" then
-local dist = (item.Position - root.Position).Magnitude
-if dist > 80 then
-item.Velocity = Vector3.new(0, 0, 0)
-item.RotVelocity = Vector3.new(0, 0, 0)
-end
-end
-if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") then
-if item.Parent and item.Parent:IsA("Workspace") then
-pcall(function() item:Destroy() end)
-end
-end
-if i % chunk == 0 then task.wait() end
-end
-end
-end)
-end
-end
-end)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
+task.spawn(function() while true do task.wait(10) if Config.MapOptimizeActive then pcall(function() if gcinfo then gcinfo() end local des = Workspace:GetDescendants() local chunk = 150 for i = 1, #des do local item = des[i] if item:IsA("Debris") or item.Name == "Effect" or item.Name == "Bullet" or item.Name == "Laser" then pcall(function() item:Destroy() end) end if i % chunk == 0 then task.wait() end end end) end end end)
+task.spawn(function() while true do task.wait(5) if Config.BHOptimize then pcall(function() local char = LocalPlayer.Character local root = char and char:FindFirstChild("HumanoidRootPart") if root then local des = Workspace:GetDescendants() local chunk = 100 for i = 1, #des do local item = des[i] if item:IsA("BasePart") and not Players:GetPlayerFromCharacter(item.Parent) and item.Name ~= "Baseplate" then local dist = (item.Position - root.Position).Magnitude if dist > 80 then item.Velocity = Vector3.new(0, 0, 0) item.RotVelocity = Vector3.new(0, 0, 0) end end if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") then if item.Parent and item.Parent:IsA("Workspace") then pcall(function() item:Destroy() end) end end if i % chunk == 0 then task.wait() end end end end) end end end)
+local inputConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 if not gameProcessed and input.KeyCode == Enum.KeyCode.K then
 main.Visible = not main.Visible
 if AfkMainFrame then AfkMainFrame.Visible = main.Visible end
-if TrackerMainFrame then
-if trackerMinimized then TrackerMainFrame.Visible = main.Visible ScrollFrame.Visible = false TrackerSearchBox.Visible = false
-else TrackerMainFrame.Visible = main.Visible end
-end
+if TrackerMainFrame then TrackerMainFrame.Visible = main.Visible end
 end
 end)
+table.insert(JanitorConnections, inputConn)
 local function ForceChatAnnouncement(msg)
-task.spawn(function()
-pcall(function()
-if TextChatService and TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-local textChannel = TextChatService:FindFirstChild("TextChannels") and TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-if textChannel then
-textChannel:SendAsync(msg)
-end
-else
-local localSayMessageRequest = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents") and game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
-if localSayMessageRequest then
-localSayMessageRequest:FireServer(msg, "All")
-end
-end
-end)
-end)
+task.spawn(function() pcall(function() if TextChatService and TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then local textChannel = TextChatService:FindFirstChild("TextChannels") and TextChatService.TextChannels:FindFirstChild("RBXGeneral") if textChannel then textChannel:SendAsync(msg) end else local localSayMessageRequest = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents") and game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest") if localSayMessageRequest then localSayMessageRequest:FireServer(msg, "All") end end end) end)
 end
 ForceChatAnnouncement("WG ON TOP // ALIHAT L7ARB---By KAi")
