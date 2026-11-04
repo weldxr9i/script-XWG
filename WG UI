@@ -1,4 +1,4 @@
--- [[ WAR GODS CLAN MULTITOOLS - MATCHING LIBRARY GLOW SWITCHES VERSION ]] --
+-- [[ WAR GODS CLAN MULTITOOLS - MATCHING LIBRARY GLOW SWITCHES VERSION - OPTIMIZED & FIXED ]] --
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local Players          = game:GetService("Players")
@@ -34,11 +34,11 @@ local function getGuiParent()
 end 
 local GUI_PARENT = getGuiParent()
 
-if GUI_PARENT:FindFirstChild("WG_LowLag_Hub") then pcall(function() GUI_PARENT["WG_LowLag_Hub"]:Destroy() end) end
-if GUI_PARENT:FindFirstChild("WG_Floating_Toggle") then pcall(function() GUI_PARENT["WG_Floating_Toggle"]:Destroy() end) end
-if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then pcall(function() CoreGui["WG_AntiAFK_Gui"]:Destroy() end) end
-if CoreGui:FindFirstChild("WG_Premium_Tracker") then pcall(function() CoreGui["WG_Premium_Tracker"]:Destroy() end) end
-if GUI_PARENT:FindFirstChild("WG_Notification_Sys") then pcall(function() GUI_PARENT["WG_Notification_Sys"]:Destroy() end) end
+local guiNames = {"WG_LowLag_Hub", "WG_Floating_Toggle", "WG_AntiAFK_Gui", "WG_Premium_Tracker", "WG_Notification_Sys"}
+for _, name in ipairs(guiNames) do
+    local target = GUI_PARENT:FindFirstChild(name) or CoreGui:FindFirstChild(name)
+    if target then pcall(function() target:Destroy() end) end
+end
 
 local JanitorConnections = {}
 
@@ -88,7 +88,6 @@ function makeDraggable(frame)
     table.insert(JanitorConnections, conn2)
 end
 
--- نظام الإشعارات المتوهجة
 local NotifGui = new("ScreenGui", { Name = "WG_Notification_Sys", ResetOnSpawn = false, DisplayOrder = 200, Parent = GUI_PARENT })
 local NotifContainer = new("Frame", { Size = UDim2.new(0, 280, 0, 400), Position = UDim2.new(1, -290, 1, -410), BackgroundTransparency = 1, Parent = NotifGui })
 new("UIListLayout", { VerticalAlignment = Enum.VerticalAlignment.Bottom, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = NotifContainer })
@@ -120,6 +119,11 @@ local DropdownBtn
 
 local function FormatTime(s)
     return string.format("%02d:%02d:%02d", math.floor(s/3600), math.floor((s%3600)/60), s%60)
+end
+
+local function GetStatsText(d, activeTime)
+    local secs = d.PastSeconds + (activeTime or 0)
+    return string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(secs))
 end
 
 local function StripCharacter(char)
@@ -202,8 +206,7 @@ loopGradient(floatGrad, 2.5)
 task.spawn(function()
 while task.wait(0.1) do
 pcall(function()
-local pulse = 2.5 + (math.sin(os.clock() * 6) * 0.6)
-floatStroke.Thickness = pulse
+floatStroke.Thickness = 2.5 + (math.sin(os.clock() * 6) * 0.6)
 end)
 end
 end)
@@ -223,8 +226,6 @@ local armAngle = ((arm - 1) * 90) + (galaxyTime * 130)
 local radius = math.random(27, 32)
 local spiralAngle = armAngle + (radius * 3.8)
 local rad = math.rad(spiralAngle)
-local pX = 0.5 + (math.cos(rad) * radius / 55)
-local pY = 0.5 + (math.sin(rad) * radius / 55)
 local chosenColor = colors[math.random(1, #colors)]
 local p = new("TextLabel", {
 Size = UDim2.fromOffset(12, 12),
@@ -235,19 +236,11 @@ Font = Enum.Font.GothamBold,
 TextColor3 = chosenColor,
 TextStrokeColor3 = chosenColor,
 TextStrokeTransparency = 0.4,
-Position = UDim2.fromScale(pX, pY),
+Position = UDim2.fromScale(0.5 + (math.cos(rad) * radius / 55), 0.5 + (math.sin(rad) * radius / 55)),
 ZIndex = 13,
 Parent = particleContainer
 })
-table.insert(galaxyParticles, {
-Obj = p,
-Age = 0,
-MaxAge = math.random(5, 8) / 10,
-BaseRadius = radius,
-AngleOffset = spiralAngle,
-IsParentParticle = true,
-ChosenColor = chosenColor
-})
+table.insert(galaxyParticles, { Obj = p, Age = 0, MaxAge = math.random(5, 8) / 10, BaseRadius = radius, AngleOffset = spiralAngle, IsParentParticle = true, ChosenColor = chosenColor })
 end
 for i = #galaxyParticles, 1, -1 do
 local data = galaxyParticles[i]
@@ -257,16 +250,12 @@ data.Obj:Destroy()
 table.remove(galaxyParticles, i)
 else
 local progress = data.Age / data.MaxAge
-local currentAngle = data.AngleOffset + (galaxyTime * 55)
-local rad = math.rad(currentAngle)
-local dynamicRadius = data.BaseRadius + (progress * 16)
-local pX = 0.5 + (math.cos(rad) * dynamicRadius / 55)
-local pY = 0.5 + (math.sin(rad) * dynamicRadius / 55)
-data.Obj.Position = UDim2.fromScale(pX, pY)
+local rad = math.rad(data.AngleOffset + (galaxyTime * 55))
+local dynRadius = data.BaseRadius + (progress * 16)
+data.Obj.Position = UDim2.fromScale(0.5 + (math.cos(rad) * dynRadius / 55), 0.5 + (math.sin(rad) * dynRadius / 55))
 data.Obj.TextTransparency = progress
 data.Obj.TextStrokeTransparency = progress
-local currentSize = math.max(1, (data.IsParentParticle and 12 or 7) * (1 - progress))
-data.Obj.TextSize = currentSize
+data.Obj.TextSize = math.max(1, (data.IsParentParticle and 12 or 7) * (1 - progress))
 if data.IsParentParticle and data.Age < (data.MaxAge * 0.5) and math.random(1, 4) == 1 then
 local child = new("TextLabel", {
 Size = UDim2.fromOffset(8, 8),
@@ -281,15 +270,7 @@ Position = data.Obj.Position,
 ZIndex = 12,
 Parent = particleContainer
 })
-table.insert(galaxyParticles, {
-Obj = child,
-Age = 0,
-MaxAge = math.random(3, 6) / 10,
-BaseRadius = dynamicRadius,
-AngleOffset = currentAngle + math.random(-15, 15),
-IsParentParticle = false,
-ChosenColor = data.ChosenColor
-})
+table.insert(galaxyParticles, { Obj = child, Age = 0, MaxAge = math.random(3, 6) / 10, BaseRadius = dynRadius, AngleOffset = data.AngleOffset + math.random(-15, 15), IsParentParticle = false, ChosenColor = data.ChosenColor })
 end
 end
 end
@@ -298,10 +279,12 @@ table.insert(JanitorConnections, rotConn)
 end)
 floatBtn.MouseButton1Click:Connect(function()
 main.Visible = not main.Visible
-local targetFrame = CoreGui:FindFirstChild("WG_AntiAFK_Gui") and CoreGui["WG_AntiAFK_Gui"]:FindFirstChildOfClass("Frame")
-if targetFrame then targetFrame.Visible = main.Visible end
-local trackerFrame = CoreGui:FindFirstChild("WG_Premium_Tracker") and CoreGui["WG_Premium_Tracker"]:FindFirstChildOfClass("Frame")
-if trackerFrame then trackerFrame.Visible = main.Visible end
+local frames = {"WG_AntiAFK_Gui", "WG_Premium_Tracker"}
+for _, fName in ipairs(frames) do
+local tGui = CoreGui:FindFirstChild(fName)
+local tFrame = tGui and tGui:FindFirstChildOfClass("Frame")
+if tFrame then tFrame.Visible = main.Visible end
+end
 end)
 local Header = new("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, ZIndex = 2, Parent = main })
 local title = new("TextLabel", { Size = UDim2.new(1, -75, 0, 20), Position = UDim2.fromOffset(15, 5), BackgroundTransparency = 1, Text = "★ " .. CONFIG.CLAN_NAME .. " CLAN UI ★", TextSize = 13, Font = Enum.Font.GothamBlack, TextColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 4, TextXAlignment = Enum.TextXAlignment.Left, Parent = Header })
@@ -318,11 +301,12 @@ local closeG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(
 loopGradient(closeG, 3)
 CloseBtn.MouseButton1Click:Connect(function()
 for _, conn in ipairs(JanitorConnections) do if conn and conn.Disconnect then pcall(function() conn:Disconnect() end) end end
-if toggleGui then pcall(function() toggleGui:Destroy() end) end
-if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then pcall(function() CoreGui["WG_AntiAFK_Gui"]:Destroy() end) end
-if CoreGui:FindFirstChild("WG_Premium_Tracker") then pcall(function() CoreGui["WG_Premium_Tracker"]:Destroy() end) end
-if NotifGui then pcall(function() NotifGui:Destroy() end) end
-gui:Destroy()
+local cleanList = {toggleGui, NotifGui, gui}
+for _, obj in ipairs(cleanList) do if obj then pcall(function() obj:Destroy() end) end end
+for _, name in ipairs({"WG_AntiAFK_Gui", "WG_Premium_Tracker"}) do
+local extra = CoreGui:FindFirstChild(name)
+if extra then pcall(function() extra:Destroy() end) end
+end
 end)
 local FPSLabel = new("TextLabel", { Size = UDim2.new(1, -30, 0, 25), Position = UDim2.fromOffset(15, 42), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = main })
 local fpsG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = FPSLabel })
@@ -331,8 +315,9 @@ task.spawn(function()
 local lastUpdate, frameCount = os.clock(), 0
 local fpsConn = RunService.RenderStepped:Connect(function()
 frameCount = frameCount + 1 local now = os.clock() local delta = now - lastUpdate
-if delta >= 1.0 then local cur = math.round(frameCount / delta) frameCount, lastUpdate = 0, now
-local txt = "[MODERATE]" if cur >= 55 then txt = "[EXCELLENT]" elseif cur < 30 then txt = "[LAGGING]" end
+if delta >= 1.0 then
+local cur = math.round(frameCount / delta) frameCount, lastUpdate = 0, now
+local txt = cur >= 55 and "[EXCELLENT]" or (cur < 30 and "[LAGGING]" or "[MODERATE]")
 FPSLabel.Text = string.format("FPS: %d | Status: %s", cur, txt)
 end
 end)
@@ -344,7 +329,7 @@ local Separator = new("Frame", { Position = UDim2.fromOffset(15, 104), Size = UD
 local TabPages, currentTab, TabButtons = {}, "Main", {}
 local function CreateTabContentFrame(name, visible)
 local sf = new("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -125), Position = UDim2.fromOffset(0, 114), BackgroundTransparency = 1, CanvasSize = UDim2.new(0, 0, 0, 550), ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(45, 45, 45), ZIndex = 4, Parent = main, ClipsDescendants = true, Visible = visible })
-local padding = new("UIPadding", { PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), Parent = sf })
+new("UIPadding", { PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), Parent = sf })
 local list = new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = sf })
 list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() sf.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 15) end)
 TabPages[name] = sf return sf
@@ -516,8 +501,9 @@ if d.TrackingDisabled then
 if d.IsPresent then d.PastSeconds = d.PastSeconds + (os.time() - d.TimeJoined) end
 Stats.Text = "TRACKING DISABLED"
 else
-if d.IsPresent then d.TimeJoined = os.time() Stats.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds)) Ind.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100)
-else Stats.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds)) Ind.BackgroundColor3 = Color3.fromRGB(255, 40, 40) end
+if d.IsPresent then d.TimeJoined = os.time() end
+Stats.Text = GetStatsText(d, d.IsPresent and (os.time() - d.TimeJoined) or 0)
+Ind.BackgroundColor3 = not d.IsPresent and Color3.fromRGB(255, 40, 40) or (d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100))
 end
 end
 end)
@@ -564,8 +550,8 @@ end)
 for username, d in pairs(ServerDatabase) do
 CreatePlayerRow(username, d.UserId) local ui = UIEntries[username]
 if ui then ui.UpdateVisuals(d.IsPresent, d.TrackingDisabled)
-if not d.IsPresent then ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40) ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds))
-else ui.Indicator.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100) ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds + (os.time() - d.TimeJoined))) end
+if not d.IsPresent then ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40) ui.TextLabel.Text = GetStatsText(d, 0)
+else ui.Indicator.BackgroundColor3 = d.Status == "rj3" and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(0, 200, 100) ui.TextLabel.Text = GetStatsText(d, os.time() - d.TimeJoined) end
 end
 end
 end
@@ -576,10 +562,7 @@ if isNew and Config.SelectedBangName ~= "" and p.Name == Config.SelectedBangName
 print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " عاد مجدداً!")
 ShowNotification("➕ المستهدف " .. p.Name .. " رجع للسيرفر!", 4)
 Config.SelectedBangPlayer = p
-if DropdownBtn then
-DropdownBtn.Text = " 🎯 TARGET: " .. p.Name
-DropdownBtn.TextColor3 = CONFIG.ACCENT_2
-end
+if DropdownBtn then DropdownBtn.Text = " 🎯 TARGET: " .. p.Name DropdownBtn.TextColor3 = CONFIG.ACCENT_2 end
 end
 if ScrollFrame then CreatePlayerRow(p.Name, p.UserId) local ui = UIEntries[p.Name] if ui then ui.UpdateVisuals(true, ServerDatabase[p.Name].TrackingDisabled) end end
 if isNew then task.spawn(function() task.wait(3) local cur = ServerDatabase[p.Name] if cur and cur.IsPresent and not cur.TrackingDisabled then cur.Status = "active" end end) end
@@ -597,7 +580,7 @@ Config.SelectedBangPlayer = nil
 end
 d.LeavesCount, d.Status = d.LeavesCount + 1, "w333 hrb"
 if not d.TrackingDisabled then d.PastSeconds = d.PastSeconds + (os.time() - d.TimeJoined) end
-if ui then ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40) ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds)) ui.UpdateVisuals(false, d.TrackingDisabled) end
+if ui then ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40) ui.TextLabel.Text = GetStatsText(d, 0) ui.UpdateVisuals(false, d.TrackingDisabled) end
 end
 end)
 table.insert(JanitorConnections, pAddConn)
@@ -610,8 +593,7 @@ local cardStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.
 local cardG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = cardStroke })
 loopGradient(cardG, 4)
 local RobloxImg = new("ImageLabel", { Size = UDim2.fromOffset(50, 50), Position = UDim2.fromOffset(25, 20), BackgroundColor3 = rgb(25, 20, 35), Parent = ProfileCard }, { corner(UDim.new(1, 0)) })
-local robloxStroke = new("UIStroke", { Color = Color3.new(1,
-1, 1), Thickness = 2, Parent = RobloxImg })
+local robloxStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = RobloxImg })
 local robloxG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = robloxStroke })
 loopGradient(robloxG, 3)
 task.spawn(function() pcall(function() local targetId = Players:GetUserIdFromNameAsync(CONFIG.MY_NAME) local thumb = Players:GetUserThumbnailAsync(targetId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48) RobloxImg.Image = thumb end) end)
@@ -649,22 +631,18 @@ local active = true
 Trigger.MouseButton1Click:Connect(function()
 active = not active
 Arrow.Text = active and "▼" or "►"
-for _, item in ipairs(items) do
-item.Visible = active
-end
+for _, item in ipairs(items) do item.Visible = active end
 end)
-return function(item)
-table.insert(items, item)
-end
+return function(item) table.insert(items, item) end
 end
 local RegisterAntiItem = CreateCollapsibleHeader("🛡️ ANTI PROTECTION FEATURES", 1, FpsContentFrame)
 local anti1 = CreateToggle("Anti-Sit (No Shake / No-Clip Seats)", 2, FpsContentFrame, function(state) Config.AntiSit = state local char = Players.LocalPlayer.Character if char then ApplyAntiSit(char) end end) RegisterAntiItem(anti1)
 local anti2 = CreateToggle("Anti-Fling Shield", 3, FpsContentFrame, function(state) Config.AntiFling = state end) RegisterAntiItem(anti2)
-local anti3 = CreateToggle("Anti-Explosion Shield & Texture", 4, FpsContentFrame, function(state) Config.AntiExplosions = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end) RegisterAntiItem(anti3)
+local anti3 = CreateToggle("Anti-Explosion Shield & Texture", 4, FpsContentFrame, function(state) Config.AntiExplosions = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0 then task.wait() end end end) end end) RegisterAntiItem(anti3)
 local anti4 = CreateToggle("Invisible Identity Purge (Names Only)", 5, FpsContentFrame, function(state) Config.PurgeAvatars = state if state then for _, p in ipairs(Players:GetPlayers()) do if p.Character then task.spawn(StripCharacter, p.Character) end end end end) RegisterAntiItem(anti4)
 local RegisterOptItem = CreateCollapsibleHeader("⚡ PERFORMANCE & OPTIMIZATION", 6, FpsContentFrame)
 local opt1 = CreateToggle("God Mode Optimize (+100 FPS Engine)", 7, FpsContentFrame, function(state) Config.Engine100FPS = state if state then pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 if sethiddenproperty then sethiddenproperty(game:GetService("Lighting"), "Technology", Enum.Technology.Compatibility) end end) else pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic end) end end) RegisterOptItem(opt1)
-local opt2 = CreateToggle("Ultimate FPS Boost (Smooth Plastic)", 8, FpsContentFrame, function(state) Config.UltimateBoost = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0  then task.wait() end end end) end end) RegisterOptItem(opt2)
+local opt2 = CreateToggle("Ultimate FPS Boost (Smooth Plastic)", 8, FpsContentFrame, function(state) Config.UltimateBoost = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0 then task.wait() end end end) end end) RegisterOptItem(opt2)
 local opt3 = CreateToggle("Lock Server Time (12 PM) & Weather", 9, FpsContentFrame, function(state) Config.FreezeWeather = state if state then ExtremeSkyClean() end end) RegisterOptItem(opt3)
 local opt4 = CreateToggle("Baseplate Only (Purge Map)", 10, FpsContentFrame, function(state) Config.BaseplateOnly = state if state then PurgeMapToBaseplate() end end) RegisterOptItem(opt4)
 local opt5 = CreateToggle("Clear Map Effects & Debris", 11, FpsContentFrame, function(state) Config.ClearEffects = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0 then task.wait() end end end) end end) RegisterOptItem(opt5)
@@ -693,8 +671,7 @@ for _, p in ipairs(Players:GetPlayers()) do
 if p ~= LocalPlayer then
 local pBtn = new("TextButton", { Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = rgb(25, 20, 35), Text = " " .. p.Name, TextColor3 = rgb(240, 240, 240), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 52, Parent = dlScroll }, { corner(UDim.new(0, 4)) })
 pBtn.MouseButton1Click:Connect(function()
-Config.SelectedBangPlayer = p
-Config.SelectedBangName = p.Name
+Config.SelectedBangPlayer, Config.SelectedBangName = p, p.Name
 DropdownBtn.Text = " 🎯 TARGET: " .. p.Name
 DropdownBtn.TextColor3 = CONFIG.ACCENT_2
 DropdownList.Visible = false
@@ -711,18 +688,7 @@ local ClanInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTra
 local clanTabG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = ClanInfo })
 loopGradient(clanTabG2, 3)
 local SpeedValue = 50
-local isSpeedLoopRunning = false
-CreateToggle(CONFIG.CLAN_NAME .. " Speed Boost", 1, ClanContentFrame, function(state)
-Config.SpeedBoost = state
-if state and not isSpeedLoopRunning then isSpeedLoopRunning = true
-task.spawn(function()
-while Config.SpeedBoost do task.wait()
-pcall(function() local char = LocalPlayer.Character local hum = char and char:FindFirstChildOfClass("Humanoid") local root = char and char:FindFirstChild("HumanoidRootPart") if hum and root and hum.MoveDirection.Magnitude > 0 then root.CFrame = root.CFrame + (hum.MoveDirection * (SpeedValue / 100)) end end)
-end
-isSpeedLoopRunning = false
-end)
-end
-end)
+CreateToggle(CONFIG.CLAN_NAME .. " Speed Boost", 1, ClanContentFrame, function(state) Config.SpeedBoost = state end)
 local BhInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "🏡 " .. CONFIG.CLAN_NAME .. " BROOKHAVEN CONTROL 🏡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = BhContentFrame })
 local bhG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = BhInfo })
 loopGradient(bhG2, 3)
@@ -738,7 +704,7 @@ while true do task.wait(1)
 if Config.TrackerEnabled and ScrollFrame then
 for name, d in pairs(ServerDatabase) do local ui = UIEntries[name]
 if ui and d.IsPresent and not d.TrackingDisabled then
-ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds + (os.time() - d.TimeJoined)))
+ui.TextLabel.Text = GetStatsText(d, os.time() - d.TimeJoined)
 end
 end
 end
@@ -749,67 +715,73 @@ local mainHeartbeat = RunService.Heartbeat:Connect(function()
 if Config.FreezeWeather then pcall(function() local Lighting = game:GetService("Lighting") Lighting.ClockTime, Lighting.GlobalShadows, Lighting.ShadowSoftness, Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.FogEnd = 12, false, 0, fixedAmbient, fixedAmbient, 999999 end) end
 local char = LocalPlayer.Character local hum = char and char:FindFirstChildOfClass("Humanoid")
 if Config.AntiSit and hum then if hum.Sit then hum.Sit = false end hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false) end
+if Config.SpeedBoost then
+pcall(function() local root = char and char:FindFirstChild("HumanoidRootPart") if hum and root and hum.MoveDirection.Magnitude > 0 then root.CFrame = root.CFrame + (hum.MoveDirection * (SpeedValue / 100)) end end)
+end
 if (Config.BangActive or Config.BangFaceActive) and Config.SelectedBangPlayer and Config.SelectedBangPlayer.Character then
--- السكربت يستمر في المحاولة والمحاكاة ولن يتوقف تلقائياً إلا بالإيقاف اليدوي
 pcall(function()
-local myRoot = char and char:FindFirstChild("HumanoidRootPart")
-local tChar = Config.SelectedBangPlayer.Character
+local myRoot = char and char:FindFirstChild("HumanoidRootPart") local tChar = Config.SelectedBangPlayer.Character
 if myRoot and tChar then
 if Config.BangActive then
 local tTorso = tChar:FindFirstChild("Torso") or tChar:FindFirstChild("UpperTorso")
-if tTorso then
-local speed = Config.SpeedBang
-local rate = math.sin(os.clock() * speed * 2) * 1.2
-myRoot.CFrame = tTorso.CFrame * CFrame.new(0, 0, 1.2 + rate)
-end
+if tTorso then myRoot.CFrame = tTorso.CFrame * CFrame.new(0, 0, 1.2 + (math.sin(os.clock() * Config.SpeedBang * 2) * 1.2)) end
 elseif Config.BangFaceActive then
 local tHead = tChar:FindFirstChild("Head")
-if tHead then
-local speed = Config.SpeedFaceBang
-local rate = math.sin(os.clock() * speed * 2) * 1.2
-myRoot.CFrame = tHead.CFrame * CFrame.new(0, 0, -1.2 - rate) * CFrame.Angles(0, math.pi, 0)
-end
+if tHead then myRoot.CFrame = tHead.CFrame * CFrame.new(0, 0, -1.2 - (math.sin(os.clock() * Config.SpeedFaceBang * 2) * 1.2)) * CFrame.Angles(0, math.pi, 0) end
 end
 end
 end)
 end
 end)
 table.insert(JanitorConnections, mainHeartbeat)
+-- [[ دمج وتوحيد حلقات معالجة عناصر الخريطة والبيئة ]] --
 task.spawn(function()
-while true do task.wait(0.2)
-if Config.AntiFling then
+while true do task.wait(5)
+local char = LocalPlayer.Character local root = char and char:FindFirstChild("HumanoidRootPart")
+if Config.AntiFling and root then
 pcall(function()
-local char = LocalPlayer.Character
-local root = char and char:FindFirstChild("HumanoidRootPart")
-if root then
 root.RotVelocity = Vector3.new(0, 0, 0)
-local allPlayers = Players:GetPlayers()
-for i = 1, #allPlayers do
-local p = allPlayers[i]
+for _, p in ipairs(Players:GetPlayers()) do
 if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
 local pRoot = p.Character.HumanoidRootPart
 if (pRoot.Position - root.Position).Magnitude < 15 then
-local pKids = p.Character:GetChildren()
-for j = 1, #pKids do
-local part = pKids[j]
+for _, part in ipairs(p.Character:GetChildren()) do
 if part:IsA("BasePart") then
 part.CanCollide = false
-if part:IsA("Part") or part:IsA("MeshPart") then
-part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+if part:IsA("Part") or part:IsA("MeshPart") then part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0) end
 end
 end
 end
 end
 end
+end)
 end
+if Config.BHOptimize and root then
+pcall(function()
+local des = Workspace:GetDescendants() local chunk = 150
+for i = 1, #des do local item = des[i]
+if item:IsA("BasePart") and not Players:GetPlayerFromCharacter(item.Parent) and item.Name ~= "Baseplate" then
+if (item.Position - root.Position).Magnitude > 80 then item.Velocity, item.RotVelocity = Vector3.new(0,0,0), Vector3.new(0,0,0) end
+elseif item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") then
+if item.Parent and item.Parent:IsA("Workspace") then pcall(function() item:Destroy() end) end
+end
+if i % chunk == 0 then task.wait() end
+end
+end)
+end
+if Config.MapOptimizeActive then
+pcall(function()
+if gcinfo then pcall(gcinfo) end
+local des = Workspace:GetDescendants() local chunk = 150
+for i = 1, #des do local item = des[i]
+if item:IsA("Debris") or item.Name == "Effect" or item.Name == "Bullet" or item.Name == "Laser" then pcall(function() item:Destroy() end) end
+if i % chunk == 0 then task.wait() end
 end
 end)
 end
 end
 end)
 task.spawn(function() while task.wait(3) do if Config.FreezeWeather then pcall(ExtremeSkyClean) end end end)
-task.spawn(function() while true do task.wait(10) if Config.MapOptimizeActive then pcall(function() if gcinfo then pcall(gcinfo) end local des = Workspace:GetDescendants() local chunk = 150 for i = 1, #des do local item = des[i] if item:IsA("Debris") or item.Name == "Effect" or item.Name == "Bullet" or item.Name == "Laser" then pcall(function() item:Destroy() end) end if i % chunk == 0 then task.wait() end end end) end end end)
-task.spawn(function() while true do task.wait(5) if Config.BHOptimize then pcall(function() local char = LocalPlayer.Character local root = char and char:FindFirstChild("HumanoidRootPart") if root then local des = Workspace:GetDescendants() local chunk = 100 for i = 1, #des do local item = des[i] if item:IsA("BasePart") and not Players:GetPlayerFromCharacter(item.Parent) and item.Name ~= "Baseplate" then local dist = (item.Position - root.Position).Magnitude if dist > 80 then item.Velocity = Vector3.new(0, 0, 0) item.RotVelocity = Vector3.new(0, 0, 0) end end if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") then if item.Parent and item.Parent:IsA("Workspace") then pcall(function() item:Destroy() end) end end if i % chunk == 0 then task.wait() end end end end) end end end)
 local inputConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 if not gameProcessed and input.KeyCode == Enum.KeyCode.K then
 main.Visible = not main.Visible
@@ -819,6 +791,14 @@ end
 end)
 table.insert(JanitorConnections, inputConn)
 local function ForceChatAnnouncement(msg)
-task.spawn(function() pcall(function() if TextChatService and TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then local textChannel = TextChatService:FindFirstChild("TextChannels") and TextChatService.TextChannels:FindFirstChild("RBXGeneral") if textChannel then textChannel:SendAsync(msg) end else local localSayMessageRequest = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents") and game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest") if localSayMessageRequest then localSayMessageRequest:FireServer(msg, "All") end end end) end)
+task.spawn(function() pcall(function()
+if TextChatService and TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+local textChannel = TextChatService:FindFirstChild("TextChannels") and TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+if textChannel then textChannel:SendAsync(msg) end
+else
+local localSayMessageRequest = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents") and game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+if localSayMessageRequest then localSayMessageRequest:FireServer(msg, "All") end
+end
+end) end)
 end
 ForceChatAnnouncement("WG ON TOP // ALIHAT L7ARB---By KAi")
