@@ -38,6 +38,7 @@ if GUI_PARENT:FindFirstChild("WG_LowLag_Hub") then pcall(function() GUI_PARENT["
 if GUI_PARENT:FindFirstChild("WG_Floating_Toggle") then pcall(function() GUI_PARENT["WG_Floating_Toggle"]:Destroy() end) end
 if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then pcall(function() CoreGui["WG_AntiAFK_Gui"]:Destroy() end) end
 if CoreGui:FindFirstChild("WG_Premium_Tracker") then pcall(function() CoreGui["WG_Premium_Tracker"]:Destroy() end) end
+if GUI_PARENT:FindFirstChild("WG_Notification_Sys") then pcall(function() GUI_PARENT["WG_Notification_Sys"]:Destroy() end) end
 
 local JanitorConnections = {}
 
@@ -87,9 +88,35 @@ function makeDraggable(frame)
     table.insert(JanitorConnections, conn2)
 end
 
-local Config = {PurgeAvatars = false, FreezeWeather = false, AntiExplosions = false, BaseplateOnly = false, UltimateBoost = false, ClearEffects = false, AntiSit = false, AntiFling = false, Engine100FPS = false, AntiAFK = false, TrackerEnabled = false, MapOptimizeActive = false, SpeedBoost = false, BHOptimize = false}
+-- نظام الإشعارات المتوهجة
+local NotifGui = new("ScreenGui", { Name = "WG_Notification_Sys", ResetOnSpawn = false, DisplayOrder = 200, Parent = GUI_PARENT })
+local NotifContainer = new("Frame", { Size = UDim2.new(0, 280, 0, 400), Position = UDim2.new(1, -290, 1, -410), BackgroundTransparency = 1, Parent = NotifGui })
+new("UIListLayout", { VerticalAlignment = Enum.VerticalAlignment.Bottom, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = NotifContainer })
+
+local function ShowNotification(text, duration)
+    duration = duration or 3.5
+    local card = new("Frame", { Size = UDim2.new(1, 0, 0, 42), BackgroundColor3 = rgb(15, 10, 22), BackgroundTransparency = 0.2, Parent = NotifContainer }, { corner(UDim.new(0, 6)) })
+    local cStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, Parent = card })
+    local cGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = cStroke })
+    loopGradient(cGrad, 2.5)
+    
+    local lbl = new("TextLabel", { Size = UDim2.new(1, -16, 1, 0), Position = UDim2.fromOffset(8, 0), BackgroundTransparency = 1, Text = text, TextColor3 = rgb(255, 255, 255), TextSize = 11, Font = Enum.Font.GothamBold, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, Parent = card })
+    local lblGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = lbl })
+    loopGradient(lblGrad, 3)
+    
+    card.Position = UDim2.new(1, 10, 0, 0)
+    tween(card, 0.3, { Position = UDim2.new(0, 0, 0, 0) })
+    
+    task.delay(duration, function()
+        local tw = tween(card, 0.3, { Position = UDim2.new(1, 10, 0, 0), BackgroundTransparency = 1 })
+        tw.Completed:Connect(function() card:Destroy() end)
+    end)
+end
+
+local Config = {PurgeAvatars = false, FreezeWeather = false, AntiExplosions = false, BaseplateOnly = false, UltimateBoost = false, ClearEffects = false, AntiSit = false, AntiFling = false, Engine100FPS = false, AntiAFK = false, TrackerEnabled = false, MapOptimizeActive = false, SpeedBoost = false, BHOptimize = false, BangActive = false, BangFaceActive = false, SelectedBangPlayer = nil, SelectedBangName = "", SpeedBang = 5, SpeedFaceBang = 5}
 local ServerDatabase, UIEntries = {}, {}
 local currentSearchText = ""
+local DropdownBtn
 
 local function FormatTime(s)
     return string.format("%02d:%02d:%02d", math.floor(s/3600), math.floor((s%3600)/60), s%60)
@@ -161,32 +188,25 @@ end
 local gui = new("ScreenGui", { Name = "WG_LowLag_Hub", ResetOnSpawn = false, DisplayOrder = 100, Parent = GUI_PARENT })
 local main = new("Frame", { Size = UDim2.fromOffset(420, 360), Position = UDim2.new(0.3, 0, 0.2, 0), BackgroundColor3 = rgb(12, 8, 22), Active = true, Parent = gui }, { corner(UDim.new(0, 16)) })
 makeDraggable(main)
-
 local stroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = main })
 local sg = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = stroke })
 loopGradient(sg, 4)
-
 if CONFIG.BG_IMAGE ~= "" then new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0, Image = CONFIG.BG_IMAGE, ImageTransparency = 0.45, ScaleType = Enum.ScaleType.Crop, ZIndex = 1, Parent = main }, { corner(UDim.new(0, 16)) }) end
-
 local toggleGui = new("ScreenGui", { Name = "WG_Floating_Toggle", ResetOnSpawn = false, DisplayOrder = 101, Parent = GUI_PARENT })
 local floatBtn = new("TextButton", { Name = "ToggleBtn", Size = UDim2.fromOffset(55, 55), Position = UDim2.new(0.02, 0, 0.2, 0), BackgroundTransparency = 1, Text = "", Active = true, ZIndex = 10, Parent = toggleGui })
 makeDraggable(floatBtn)
-
 local floatImg = new("ImageLabel", { Size = UDim2.fromScale(1, 1), Image = CONFIG.TOGGLE_IMG, BackgroundTransparency = 1, ZIndex = 11, Parent = floatBtn }, { corner(UDim.new(1, 0)) })
-
 local floatStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2.5, Parent = floatImg })
 local floatGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = floatStroke })
 loopGradient(floatGrad, 2.5)
-
 task.spawn(function()
-    while task.wait(0.1) do
-        pcall(function()
-            local pulse = 2.5 + (math.sin(os.clock() * 6) * 0.6)
-            floatStroke.Thickness = pulse
-        end)
-    end
+while task.wait(0.1) do
+pcall(function()
+local pulse = 2.5 + (math.sin(os.clock() * 6) * 0.6)
+floatStroke.Thickness = pulse
 end)
-
+end
+end)
 local floatText = new("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "WG", TextSize = 16, Font = Enum.Font.GothamBlack, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.2, TextStrokeColor3 = rgb(10, 5, 20), ZIndex = 12, Parent = floatBtn })
 local floatTextGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = floatText })
 loopGradient(floatTextGrad, 3)
@@ -301,6 +321,7 @@ for _, conn in ipairs(JanitorConnections) do if conn and conn.Disconnect then pc
 if toggleGui then pcall(function() toggleGui:Destroy() end) end
 if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then pcall(function() CoreGui["WG_AntiAFK_Gui"]:Destroy() end) end
 if CoreGui:FindFirstChild("WG_Premium_Tracker") then pcall(function() CoreGui["WG_Premium_Tracker"]:Destroy() end) end
+if NotifGui then pcall(function() NotifGui:Destroy() end) end
 gui:Destroy()
 end)
 local FPSLabel = new("TextLabel", { Size = UDim2.new(1, -30, 0, 25), Position = UDim2.fromOffset(15, 42), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = main })
@@ -322,7 +343,7 @@ local TabsLayout = new("UIListLayout", { FillDirection = Enum.FillDirection.Hori
 local Separator = new("Frame", { Position = UDim2.fromOffset(15, 104), Size = UDim2.new(1, -30, 0, 1), BackgroundColor3 = Color3.fromRGB(45, 45, 45), BorderSizePixel = 0, ZIndex = 4, Parent = main })
 local TabPages, currentTab, TabButtons = {}, "Main", {}
 local function CreateTabContentFrame(name, visible)
-local sf = new("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -125), Position = UDim2.fromOffset(0, 114), BackgroundTransparency = 1, CanvasSize = UDim2.new(0, 0, 0, 420), ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(45, 45, 45), ZIndex = 4, Parent = main, ClipsDescendants = true, Visible = visible })
+local sf = new("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -125), Position = UDim2.fromOffset(0, 114), BackgroundTransparency = 1, CanvasSize = UDim2.new(0, 0, 0, 550), ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(45, 45, 45), ZIndex = 4, Parent = main, ClipsDescendants = true, Visible = visible })
 local padding = new("UIPadding", { PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), Parent = sf })
 local list = new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = sf })
 list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() sf.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 15) end)
@@ -407,6 +428,49 @@ callback(active)
 end)
 return Row
 end
+local function CreateSlider(text, order, targetFrame, min, max, default, callback)
+local Row = new("Frame", { Size = UDim2.new(1, 0, 0, 48), BackgroundColor3 = rgb(15, 15, 15), BackgroundTransparency = 0.4, LayoutOrder = order, ZIndex = 4, Parent = targetFrame }, { corner(UDim.new(0, 6)) })
+local sliderStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = Row })
+local sliderGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = sliderStroke })
+loopGradient(sliderGrad, 3)
+local Label = new("TextLabel", { Size = UDim2.new(1, -60, 0, 20), Position = UDim2.fromOffset(12, 3), BackgroundTransparency = 1, Text = text, TextColor3 = rgb(255, 255, 255), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = Row })
+local txtGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = Label })
+loopGradient(txtGrad, 3)
+local ValLabel = new("TextLabel", { Size = UDim2.fromOffset(40, 20), Position = UDim2.new(1, -45, 0, 3), BackgroundTransparency = 1, Text = tostring(default), TextColor3 = CONFIG.ACCENT_2, TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Right, Parent = Row })
+local SliderBtn = new("TextButton", { Size = UDim2.new(1, -24, 0, 10), Position = UDim2.fromOffset(12, 28), BackgroundColor3 = rgb(22, 16, 32), Text = "", Parent = Row }, { corner(UDim.new(0, 5)) })
+local Fill = new("Frame", { Size = UDim2.fromScale((default-min)/(max-min), 1), BackgroundColor3 = CONFIG.ACCENT, Parent = SliderBtn }, { corner(UDim.new(0, 5)) })
+local SliderKnob = new("Frame", { Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new((default-min)/(max-min), 0, 0.5, 0), BackgroundColor3 = rgb(25, 25, 25), ZIndex = 5, Parent = SliderBtn }, { corner(UDim.new(1, 0)) })
+local knobGlow = new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 2, Parent = SliderKnob })
+local function update(input)
+local pos = math.clamp((input.Position.X - SliderBtn.AbsolutePosition.X) / SliderBtn.AbsoluteSize.X, 0, 1)
+Fill.Size = UDim2.fromScale(pos, 1)
+SliderKnob.Position = UDim2.new(pos, 0, 0.5, 0)
+local val = math.floor(min + (pos * (max - min)))
+ValLabel.Text = tostring(val)
+callback(val)
+end
+local sliding = false
+SliderBtn.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+sliding = true
+tween(SliderKnob, 0.15, { Size = UDim2.fromOffset(20, 20) })
+knobGlow.Thickness = 3.5
+update(input)
+end
+end)
+UserInputService.InputChanged:Connect(function(input)
+if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+update(input)
+end
+end)
+UserInputService.InputEnded:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+sliding = false
+tween(SliderKnob, 0.15, { Size = UDim2.fromOffset(16, 16) })
+knobGlow.Thickness = 2
+end
+end)
+end
 local AntiAfkGui, AfkMainFrame
 local function CreateAntiAfkWindow()
 if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then CoreGui["WG_AntiAFK_Gui"]:Destroy() end
@@ -441,7 +505,7 @@ local Toggle = new("TextButton", { Size = UDim2.fromOffset(45, 24), Position = U
 local function UpdateToggleVisuals(isPresent, isDisabled)
 if isDisabled then Toggle.Text = "OFF" Toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40) Toggle.TextColor3 = Color3.fromRGB(150, 150, 150)
 elseif not isPresent then Toggle.Text = "OUT" Toggle.BackgroundColor3 = Color3.fromRGB(50, 15, 15) Toggle.TextColor3 = Color3.fromRGB(255, 70, 70)
-else Toggle.Text = "ON" Toggle.BackgroundColor3 = Color3.fromRGB(20, 40, 25) Toggle.TextColor3 = Color3.fromRGB(100, 255, 100) end
+else Toggle.Text = "ON" Toggle.BackgroundColor3 = rgb(20, 40, 25) Toggle.TextColor3 = rgb(100, 255, 100) end
 end
 Toggle.MouseButton1Click:Connect(function()
 local d = ServerDatabase[username]
@@ -508,7 +572,15 @@ end
 local function SetupTrackerLogic(p, isNew)
 if not p then return end local d = ServerDatabase[p.Name]
 ServerDatabase[p.Name] = {UserId = p.UserId, TimeJoined = os.time(), PastSeconds = d and d.PastSeconds or 0, JoinsCount = d and (d.JoinsCount+1) or 1, LeavesCount = d and d.LeavesCount or 0, IsPresent = true, Status = isNew and "rj3" or "active", TrackingDisabled = d and d.TrackingDisabled or false}
-if isNew then print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " دخل السيرفر!") end
+if isNew and Config.SelectedBangName ~= "" and p.Name == Config.SelectedBangName then
+print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " عاد مجدداً!")
+ShowNotification("➕ المستهدف " .. p.Name .. " رجع للسيرفر!", 4)
+Config.SelectedBangPlayer = p
+if DropdownBtn then
+DropdownBtn.Text = " 🎯 TARGET: " .. p.Name
+DropdownBtn.TextColor3 = CONFIG.ACCENT_2
+end
+end
 if ScrollFrame then CreatePlayerRow(p.Name, p.UserId) local ui = UIEntries[p.Name] if ui then ui.UpdateVisuals(true, ServerDatabase[p.Name].TrackingDisabled) end end
 if isNew then task.spawn(function() task.wait(3) local cur = ServerDatabase[p.Name] if cur and cur.IsPresent and not cur.TrackingDisabled then cur.Status = "active" end end) end
 end
@@ -516,7 +588,14 @@ for _, p in pairs(Players:GetPlayers()) do SetupTrackerLogic(p, false) end
 local pAddConn = Players.PlayerAdded:Connect(function(p) SetupTrackerLogic(p, true) end)
 local pRemConn = Players.PlayerRemoving:Connect(function(p)
 local d, ui = ServerDatabase[p.Name], UIEntries[p.Name]
-if d and d.IsPresent then d.IsPresent = false print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " غادر السيرفر!") d.LeavesCount, d.Status = d.LeavesCount + 1, "w333 hrb"
+if d and d.IsPresent then
+d.IsPresent = false
+if Config.SelectedBangName ~= "" and p.Name == Config.SelectedBangName then
+print("☣ [" .. CONFIG.CLAN_NAME .. " TRACKER]: " .. p.Name .. " غادر السيرفر!")
+ShowNotification("❌ المستهدف " .. p.Name .. " غادر السيرفر!", 4)
+Config.SelectedBangPlayer = nil
+end
+d.LeavesCount, d.Status = d.LeavesCount + 1, "w333 hrb"
 if not d.TrackingDisabled then d.PastSeconds = d.PastSeconds + (os.time() - d.TimeJoined) end
 if ui then ui.Indicator.BackgroundColor3 = Color3.fromRGB(255, 40, 40) ui.TextLabel.Text = string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(d.PastSeconds)) ui.UpdateVisuals(false, d.TrackingDisabled) end
 end
@@ -531,7 +610,8 @@ local cardStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.
 local cardG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = cardStroke })
 loopGradient(cardG, 4)
 local RobloxImg = new("ImageLabel", { Size = UDim2.fromOffset(50, 50), Position = UDim2.fromOffset(25, 20), BackgroundColor3 = rgb(25, 20, 35), Parent = ProfileCard }, { corner(UDim.new(1, 0)) })
-local robloxStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = RobloxImg })
+local robloxStroke = new("UIStroke", { Color = Color3.new(1,
+1, 1), Thickness = 2, Parent = RobloxImg })
 local robloxG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = robloxStroke })
 loopGradient(robloxG, 3)
 task.spawn(function() pcall(function() local targetId = Players:GetUserIdFromNameAsync(CONFIG.MY_NAME) local thumb = Players:GetUserThumbnailAsync(targetId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48) RobloxImg.Image = thumb end) end)
@@ -583,8 +663,7 @@ local anti2 = CreateToggle("Anti-Fling Shield", 3, FpsContentFrame, function(sta
 local anti3 = CreateToggle("Anti-Explosion Shield & Texture", 4, FpsContentFrame, function(state) Config.AntiExplosions = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % chunk == 0 then task.wait() end end end) end end) RegisterAntiItem(anti3)
 local anti4 = CreateToggle("Invisible Identity Purge (Names Only)", 5, FpsContentFrame, function(state) Config.PurgeAvatars = state if state then for _, p in ipairs(Players:GetPlayers()) do if p.Character then task.spawn(StripCharacter, p.Character) end end end end) RegisterAntiItem(anti4)
 local RegisterOptItem = CreateCollapsibleHeader("⚡ PERFORMANCE & OPTIMIZATION", 6, FpsContentFrame)
-local
-opt1 = CreateToggle("God Mode Optimize (+100 FPS Engine)", 7, FpsContentFrame, function(state) Config.Engine100FPS = state if state then pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 if sethiddenproperty then sethiddenproperty(game:GetService("Lighting"), "Technology", Enum.Technology.Compatibility) end end) else pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic end) end end) RegisterOptItem(opt1)
+local opt1 = CreateToggle("God Mode Optimize (+100 FPS Engine)", 7, FpsContentFrame, function(state) Config.Engine100FPS = state if state then pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 if sethiddenproperty then sethiddenproperty(game:GetService("Lighting"), "Technology", Enum.Technology.Compatibility) end end) else pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic end) end end) RegisterOptItem(opt1)
 local opt2 = CreateToggle("Ultimate FPS Boost (Smooth Plastic)", 8, FpsContentFrame, function(state) Config.UltimateBoost = state if state then task.spawn(function() local descendants = Workspace:GetDescendants() local chunk = 200 for i = 1, #descendants do pcall(OptimizeWorldObject, descendants[i]) if i % 200 == 0  then task.wait() end end end) end end) RegisterOptItem(opt2)
 local opt3 = CreateToggle("Lock Server Time (12 PM) & Weather", 9, FpsContentFrame, function(state) Config.FreezeWeather = state if state then ExtremeSkyClean() end end) RegisterOptItem(opt3)
 local opt4 = CreateToggle("Baseplate Only (Purge Map)", 10, FpsContentFrame, function(state) Config.BaseplateOnly = state if state then PurgeMapToBaseplate() end end) RegisterOptItem(opt4)
@@ -599,7 +678,36 @@ local smlaG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(
 loopGradient(smlaG2, 3)
 CreateToggle("Activate Anti-AFK System", 2, SmlaContentFrame, function(state) Config.AntiAFK = state if state then CreateAntiAfkWindow() else if AntiAfkGui then pcall(function() AntiAfkGui:Destroy() end) end end end)
 CreateToggle("Activate Premium Tracker", 3, SmlaContentFrame, function(state) Config.TrackerEnabled = state if state then CreateTrackerWindow() else if TrackerGui then pcall(function() TrackerGui:Destroy() UIEntries = {} ScrollFrame = nil end) end end end)
-local ClanInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "🔥 " .. CONFIG.CLAN_NAME .. " CLAN MULTITOOLS 🔥", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = ClanContentFrame })
+local PlayerSelectRow = new("Frame", { Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = rgb(20, 15, 25), LayoutOrder = 4, Parent = SmlaContentFrame }, { corner(UDim.new(0, 8)) })
+local psStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, Parent = PlayerSelectRow })
+local psGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = psStroke })
+loopGradient(psGrad, 3)
+DropdownBtn = new("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "  Select a player...", TextColor3 = rgb(235, 235, 235), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = PlayerSelectRow })
+local DropdownList = new("Frame", { Size = UDim2.new(1, 0, 0, 110), Position = UDim2.new(0, 0, 1, 3), BackgroundColor3 = rgb(15, 10, 20), Visible = false, ZIndex = 50, Parent = PlayerSelectRow }, { corner(UDim.new(0, 8)) })
+local dlStroke = new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 1.5, Parent = DropdownList })
+local dlScroll = new("ScrollingFrame", { Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), BackgroundTransparency = 1, CanvasSize = UDim2.fromScale(0, 0), ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 51, Parent = DropdownList })
+new("UIListLayout", { Padding = UDim.new(0, 4), Parent = dlScroll })
+local function UpdateDropdown()
+for _, c in ipairs(dlScroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+for _, p in ipairs(Players:GetPlayers()) do
+if p ~= LocalPlayer then
+local pBtn = new("TextButton", { Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = rgb(25, 20, 35), Text = " " .. p.Name, TextColor3 = rgb(240, 240, 240), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 52, Parent = dlScroll }, { corner(UDim.new(0, 4)) })
+pBtn.MouseButton1Click:Connect(function()
+Config.SelectedBangPlayer = p
+Config.SelectedBangName = p.Name
+DropdownBtn.Text = " 🎯 TARGET: " .. p.Name
+DropdownBtn.TextColor3 = CONFIG.ACCENT_2
+DropdownList.Visible = false
+end)
+end
+end
+end
+DropdownBtn.MouseButton1Click:Connect(function() DropdownList.Visible = not DropdownList.Visible if DropdownList.Visible then UpdateDropdown() end end)
+CreateToggle("/NIKA7", 5, SmlaContentFrame, function(state) Config.BangActive = state if state then Config.BangFaceActive = false end end)
+CreateToggle("/YMSO", 6, SmlaContentFrame, function(state) Config.BangFaceActive = state if state then Config.BangActive = false end end)
+CreateSlider("speed bang", 7, SmlaContentFrame, 1, 50, 5, function(val) Config.SpeedBang = val end)
+CreateSlider("speed face bang", 8, SmlaContentFrame, 1, 50, 5, function(val) Config.SpeedFaceBang = val end)
+local ClanInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 9, Text = "🔥 " .. CONFIG.CLAN_NAME .. " CLAN MULTITOOLS 🔥", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = ClanContentFrame })
 local clanTabG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = ClanInfo })
 loopGradient(clanTabG2, 3)
 local SpeedValue = 50
@@ -641,6 +749,30 @@ local mainHeartbeat = RunService.Heartbeat:Connect(function()
 if Config.FreezeWeather then pcall(function() local Lighting = game:GetService("Lighting") Lighting.ClockTime, Lighting.GlobalShadows, Lighting.ShadowSoftness, Lighting.Ambient, Lighting.OutdoorAmbient, Lighting.FogEnd = 12, false, 0, fixedAmbient, fixedAmbient, 999999 end) end
 local char = LocalPlayer.Character local hum = char and char:FindFirstChildOfClass("Humanoid")
 if Config.AntiSit and hum then if hum.Sit then hum.Sit = false end hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false) end
+if (Config.BangActive or Config.BangFaceActive) and Config.SelectedBangPlayer and Config.SelectedBangPlayer.Character then
+-- السكربت يستمر في المحاولة والمحاكاة ولن يتوقف تلقائياً إلا بالإيقاف اليدوي
+pcall(function()
+local myRoot = char and char:FindFirstChild("HumanoidRootPart")
+local tChar = Config.SelectedBangPlayer.Character
+if myRoot and tChar then
+if Config.BangActive then
+local tTorso = tChar:FindFirstChild("Torso") or tChar:FindFirstChild("UpperTorso")
+if tTorso then
+local speed = Config.SpeedBang
+local rate = math.sin(os.clock() * speed * 2) * 1.2
+myRoot.CFrame = tTorso.CFrame * CFrame.new(0, 0, 1.2 + rate)
+end
+elseif Config.BangFaceActive then
+local tHead = tChar:FindFirstChild("Head")
+if tHead then
+local speed = Config.SpeedFaceBang
+local rate = math.sin(os.clock() * speed * 2) * 1.2
+myRoot.CFrame = tHead.CFrame * CFrame.new(0, 0, -1.2 - rate) * CFrame.Angles(0, math.pi, 0)
+end
+end
+end
+end)
+end
 end)
 table.insert(JanitorConnections, mainHeartbeat)
 task.spawn(function()
