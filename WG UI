@@ -18,9 +18,9 @@ local CONFIG = {
     ACCENT     = Color3.fromRGB(148, 0, 211),
     ACCENT_2   = Color3.fromRGB(255, 60, 200),
     INSTA_USER = "h04x_jf",
+    DISCORD_INVITE = "wsBkrGhdhM",
     TOGGLE_IMG = "rbxassetid://120125603923365", 
-    INSTA_ICON = "rbxassetid://95610090491460",
-    DISCORD_INV = "https://discord.com"
+    INSTA_ICON = "rbxassetid://95610090491460"
 }
 
 local rgb = Color3.fromRGB
@@ -309,6 +309,9 @@ local extra = CoreGui:FindFirstChild(name)
 if extra then pcall(function() extra:Destroy() end) end
 end
 end)
+local PlayerSelectRow = nil
+local TrackerGui, TrackerMainFrame, ScrollFrame, TrackerHeader, TrackerSearchBox = nil, nil, nil, nil, nil
+local trackerMinimized, isTrackerTweening = false, false
 local FPSLabel = new("TextLabel", { Size = UDim2.new(1, -30, 0, 25), Position = UDim2.fromOffset(15, 42), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = main })
 local fpsG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = FPSLabel })
 loopGradient(fpsG, 3)
@@ -473,8 +476,6 @@ loopGradient(TitleGrad, 3)
 new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), Position = UDim2.new(0, 0, 0, 45), Text = "Clan: " .. CONFIG.CLAN_NAME .. " | By: " .. CONFIG.MY_NAME, TextColor3 = rgb(15, 15, 15), TextSize = 14, Font = Enum.Font.SourceSansBold, BackgroundTransparency = 1, TextStrokeTransparency = 0.4, TextStrokeColor3 = Color3.new(1, 1, 1), ZIndex = 3, Parent = AfkMainFrame })
 new("TextLabel", { Size = UDim2.new(1, 0, 0, 40), Position = UDim2.new(0, 0, 0, 80), Text = "● ميزة منع الخمول تعمل بنجاح وآمنة", TextColor3 = rgb(0, 200, 50), TextSize = 13, Font = Enum.Font.GothamBold, BackgroundTransparency = 1, TextStrokeTransparency = 0.3, TextStrokeColor3 = Color3.new(0, 0, 0), ZIndex = 3, Parent = AfkMainFrame })
 end
-local TrackerGui, TrackerMainFrame, ScrollFrame, TrackerHeader, TrackerSearchBox
-local trackerMinimized, isTrackerTweening = false, false
 local function CreatePlayerRow(username, userId)
 if not ScrollFrame or UIEntries[username] then return end
 local Row = new("Frame", { Size = UDim2.new(1, -10, 0, 55), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Parent = ScrollFrame }, { corner(UDim.new(0, 6)) })
@@ -586,222 +587,71 @@ end
 end)
 table.insert(JanitorConnections, pAddConn)
 table.insert(JanitorConnections, pRemConn)
-local MainInfo = new("TextLabel", {
-Size = UDim2.new(1, 0, 0, 25),
-BackgroundTransparency = 1,
-LayoutOrder = 1,
-Text = "👑 " .. CONFIG.CLAN_NAME .. " DEVELOPER PROFILE 👑",
-TextColor3 = rgb(255, 255, 255),
-TextSize = 12,
-Font = Enum.Font.GothamBlack,
-Parent = MainContentFrame
-})
+local MainInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "👑 " .. CONFIG.CLAN_NAME .. " DEVELOPER PROFILE 👑", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = MainContentFrame })
 local mainG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = MainInfo })
 loopGradient(mainG, 3)
-local ProfileCard = new("Frame", {
-Size = UDim2.new(1, 0, 0, 195),
-BackgroundColor3 = rgb(18, 14, 28),
-BackgroundTransparency = 0.3,
-LayoutOrder = 2,
-Parent = MainContentFrame
-}, { corner(UDim.new(0, 10)) })
+local ProfileCard = new("Frame", { Size = UDim2.new(1, 0, 0, 240), BackgroundColor3 = rgb(18, 14, 28), BackgroundTransparency = 0.3, LayoutOrder = 2, Parent = MainContentFrame }, { corner(UDim.new(0, 10)) })
 local cardStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ProfileCard })
 local cardG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = cardStroke })
 loopGradient(cardG, 4)
-local RobloxImg = new("ImageLabel", {
-Size = UDim2.fromOffset(45, 45),
-Position = UDim2.fromOffset(20, 15),
-BackgroundColor3 = rgb(25, 20, 35),
-Parent = ProfileCard
-}, { corner(UDim.new(1, 0)) })
+-- 1. ROW ROBLOX
+local RobloxImg = new("ImageLabel", { Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(20, 15), BackgroundColor3 = rgb(25, 20, 35), Parent = ProfileCard }, { corner(UDim.new(1, 0)) })
 local robloxStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = RobloxImg })
 local robloxG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = robloxStroke })
 loopGradient(robloxG, 3)
-task.spawn(function()
-pcall(function()
-local targetId = Players:GetUserIdFromNameAsync(CONFIG.MY_NAME)
-local thumb = Players:GetUserThumbnailAsync(targetId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
-RobloxImg.Image = thumb
-end)
-end)
-local RobloxName = new("TextLabel", {
-Size = UDim2.new(0, 250, 0, 20),
-Position = UDim2.fromOffset(75, 16),
-BackgroundTransparency = 1,
-Text = "Roblox: " .. CONFIG.MY_NAME,
-TextColor3 = Color3.new(1, 1, 1),
-Font = Enum.Font.GothamBold,
-TextSize = 13,
-TextXAlignment = Enum.TextXAlignment.Left,
-Parent = ProfileCard
-})
+task.spawn(function() pcall(function() local targetId = Players:GetUserIdFromNameAsync(CONFIG.MY_NAME) local thumb = Players:GetUserThumbnailAsync(targetId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48) RobloxImg.Image = thumb end) end)
+local RobloxName = new("TextLabel", { Size = UDim2.new(1, -90, 0, 42), Position = UDim2.fromOffset(75, 15), BackgroundTransparency = 1, Text = "Roblox: " .. CONFIG.MY_NAME, TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = ProfileCard })
 local robloxTextG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = RobloxName })
 loopGradient(robloxTextG, 3)
-local InstaBtn = new("TextButton", {
-Size = UDim2.new(1, -20, 0, 42),
-Position = UDim2.fromOffset(10, 72),
-BackgroundColor3 = rgb(25, 18, 36),
-BackgroundTransparency = 0.5,
-Text = "",
-ZIndex = 4,
-Parent = ProfileCard
-}, { corner(UDim.new(0, 6)) })
-local instaBtnStroke = new("UIStroke", { Color = Color3.fromRGB(45, 40, 55), Thickness = 1, Parent = InstaBtn })
-local InstaImg = new("ImageLabel", {
-Size = UDim2.fromOffset(26, 26),
-Position = UDim2.fromOffset(12, 8),
-Image = CONFIG.INSTA_ICON,
-BackgroundTransparency = 1,
-ScaleType = Enum.ScaleType.Crop,
-ZIndex = 5,
-Parent = InstaBtn
-})
-local InstaName = new("TextLabel", {
-Size = UDim2.new(0, 250, 0, 18),
-Position = UDim2.fromOffset(48, 5),
-BackgroundTransparency = 1,
-Text = "Instagram: @" .. CONFIG.INSTA_USER,
-TextColor3 = Color3.new(1, 1, 1),
-Font = Enum.Font.GothamBold,
-TextSize = 11,
-TextXAlignment = Enum.TextXAlignment.Left,
-ZIndex = 5,
-Parent = InstaBtn
-})
-local InstaTip = new("TextLabel", {
-Size = UDim2.new(0, 250, 0, 12),
-Position = UDim2.fromOffset(48, 22),
-BackgroundTransparency = 1,
-Text = "Click to copy username",
-TextColor3 = rgb(180, 170, 200),
-Font = Enum.Font.GothamMedium,
-TextSize = 9,
-TextXAlignment = Enum.TextXAlignment.Left,
-ZIndex = 5,
-Parent = InstaBtn
-})
+-- 2. ROW INSTAGRAM
+local InstaBtn = new("TextButton", { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 70), BackgroundTransparency = 1, Text = "", Parent = ProfileCard })
+local InstaImg = new("ImageLabel", { Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(20, 4), Image = CONFIG.INSTA_ICON, BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop, Parent = InstaBtn }, { corner(UDim.new(1, 0)) })
+local instaStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = InstaImg })
+local instaGFrame = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = instaStroke })
+loopGradient(instaGFrame, 3)
+local InstaName = new("TextLabel", { Size = UDim2.new(1, -90, 0, 20), Position = UDim2.fromOffset(75, 4), BackgroundTransparency = 1, Text = "Instagram: @" .. CONFIG.INSTA_USER, TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = InstaBtn })
+local instaG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = InstaName })
+loopGradient(instaG, 3)
+local InstaTip = new("TextLabel", { Size = UDim2.new(1, -90, 0, 14), Position = UDim2.fromOffset(75, 24), BackgroundTransparency = 1, Text = "Click to copy username", TextColor3 = rgb(180, 170, 200), Font = Enum.Font.GothamSemibold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = InstaBtn })
 InstaBtn.MouseButton1Click:Connect(function()
-if setclipboard then
-setclipboard(CONFIG.INSTA_USER)
-InstaTip.Text = "✓ Username Copied!"
-InstaTip.TextColor3 = rgb(80, 220, 100)
-task.delay(2, function()
-if InstaTip and InstaTip.Parent then
-InstaTip.Text = "Click to copy username"
-InstaTip.TextColor3 = rgb(180, 170, 200)
-end
+if setclipboard then setclipboard(CONFIG.INSTA_USER) InstaTip.Text = "✓ Username Copied!" InstaTip.TextColor3 = rgb(80, 220, 100) task.wait(2) if InstaTip and InstaTip.Parent then InstaTip.Text = "Click to copy username" InstaTip.TextColor3 = rgb(180, 170, 200) end
+else InstaTip.Text = "Clipboard not supported!" InstaTip.TextColor3 = rgb(220, 80, 80) end
 end)
+-- 3. ROW DISCORD (SIMULATED DYNAMICALLY WITH NO IMAGE DEPENDENCY)
+local DiscordBtn = new("TextButton", { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 130), BackgroundTransparency = 1, Text = "", Parent = ProfileCard })
+-- الوعاء الحاضن للأيقونة المصنوعة برمجياً
+local DiscordContainer = new("Frame", { Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(20, 4), BackgroundTransparency = 1, Parent = DiscordBtn })
+-- بناء أجنحة/قرون الديسكورد العليا يدوياً
+local TopEarLeft = new("Frame", { Size = UDim2.fromOffset(12, 10), Position = UDim2.fromOffset(5, 6), BackgroundColor3 = rgb(255, 255, 255), Rotation = -25, Parent = DiscordContainer }, { corner(UDim.new(0, 4)) })
+local TopEarRight = new("Frame", { Size = UDim2.fromOffset(12, 10), Position = UDim2.fromOffset(25, 6), BackgroundColor3 = rgb(255, 255, 255), Rotation = 25, Parent = DiscordContainer }, { corner(UDim.new(0, 4)) })
+-- الوجه الرئيسي المنحني العريض للديسكورد
+local MainFace = new("Frame", { Size = UDim2.fromOffset(34, 22), Position = UDim2.fromOffset(4, 12), BackgroundColor3 = rgb(255, 255, 255), Parent = DiscordContainer }, { corner(UDim.new(0, 7)) })
+-- إضافة عيون الديسكورد المفرغة بداخل الوجه الرئيسي
+local EyeLeft = new("Frame", { Size = UDim2.fromOffset(6, 6), Position = UDim2.fromOffset(7, 8), BackgroundColor3 = rgb(18, 14, 28), Parent = MainFace }, { corner(UDim.new(1, 0)) })
+local EyeRight = new("Frame", { Size = UDim2.fromOffset(6, 6), Position = UDim2.fromOffset(21, 8), BackgroundColor3 = rgb(18, 14, 28), Parent = MainFace }, { corner(UDim.new(1, 0)) })
+-- دمج الأقسام تحت تأثير الإضاءة المتغير للكلان (Glow Effects)
+for _, element in ipairs({TopEarLeft, TopEarRight, MainFace}) do
+local elGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = element })
+loopGradient(elGrad, 3)
 end
-end)
-local DiscordBtn = new("TextButton", {
-Size = UDim2.new(1, -20, 0, 42),
-Position = UDim2.fromOffset(10, 120),
-BackgroundColor3 = rgb(24, 20, 42),
-BackgroundTransparency = 0.4,
-Text = "",
-ZIndex = 4,
-Parent = ProfileCard
-}, { corner(UDim.new(0, 6)) })
-local discordBtnStroke = new("UIStroke", { Color = Color3.fromRGB(60, 50, 85), Thickness = 1.2, Parent = DiscordBtn })
-local CustomDiscordIcon = new("Frame", {
-Size = UDim2.fromOffset(34, 30),
-Position = UDim2.fromOffset(12, 7),
-BackgroundTransparency = 1,
-ZIndex = 5,
-Parent = DiscordBtn
-})
-local FaceMain = new("Frame", {
-Size = UDim2.new(0, 32, 0, 15),
-Position = UDim2.fromOffset(1, 3),
-BackgroundColor3 = CONFIG.ACCENT,
-ZIndex = 6,
-Parent = CustomDiscordIcon
-}, { corner(UDim.new(0, 5)) })
-local faceStroke = new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 2, Parent = FaceMain })
-new("Frame", { Size = UDim2.fromOffset(5, 5), Position = UDim2.fromOffset(7, 5), BackgroundColor3 = rgb(255, 255, 255), ZIndex = 7, Parent = FaceMain }, { corner(UDim.new(1, 0)) })
-new("Frame", { Size = UDim2.fromOffset(5, 5), Position = UDim2.fromOffset(20, 5), BackgroundColor3 = rgb(255, 255, 255), ZIndex = 7, Parent = FaceMain }, { corner(UDim.new(1, 0)) })
-local JawLeft = new("Frame", {
-Size = UDim2.fromOffset(10, 7),
-Position = UDim2.fromOffset(2, 13),
-BackgroundColor3 = CONFIG.ACCENT,
-Rotation = 25,
-ZIndex = 5,
-Parent = CustomDiscordIcon
-}, { corner(UDim.new(0, 2)) })
-new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 2, Parent = JawLeft })
-local JawRight = new("Frame", {
-Size = UDim2.fromOffset(10, 7),
-Position = UDim2.fromOffset(20, 13),
-BackgroundColor3 = CONFIG.ACCENT,
-Rotation = -25,
-ZIndex = 5,
-Parent = CustomDiscordIcon
-}, { corner(UDim.new(0, 2)) })
-new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 2, Parent = JawRight })
-local BottomCurve = new("Frame", {
-Size = UDim2.new(0, 14, 0, 4),
-Position = UDim2.fromOffset(10, 17),
-BackgroundColor3 = CONFIG.ACCENT,
-ZIndex = 6,
-Parent = CustomDiscordIcon
-}, { corner(UDim.new(0, 1)) })
-new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 2, Parent = BottomCurve })
-local DiscordName = new("TextLabel", {
-Size = UDim2.new(0, 250, 0, 18),
-Position = UDim2.fromOffset(54, 5),
-BackgroundTransparency = 1,
-Text = "Our Clan Discord Server",
-TextColor3 = Color3.new(1, 1, 1),
-Font = Enum.Font.GothamBlack,
-TextSize = 11,
-TextXAlignment = Enum.TextXAlignment.Left,
-ZIndex = 5,
-Parent = DiscordBtn
-})
-local discordG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = DiscordName })
+local DiscordName = new("TextLabel", { Size = UDim2.new(1, -90, 0, 20), Position = UDim2.fromOffset(75, 4), BackgroundTransparency = 1, Text = "Our Clan Discord Server", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = DiscordBtn })
+local discordG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = DiscordName })
 loopGradient(discordG, 3)
-local DiscordTip = new("TextLabel", {
-Size = UDim2.new(0, 250, 0, 12),
-Position = UDim2.fromOffset(54, 22),
-BackgroundTransparency = 1,
-Text = "Click to copy invite link",
-TextColor3 = rgb(170, 160, 195),
-Font = Enum.Font.GothamMedium,
-TextSize = 9,
-TextXAlignment = Enum.TextXAlignment.Left,
-ZIndex = 5,
-Parent = DiscordBtn
-})
+local DiscordTip = new("TextLabel", { Size = UDim2.new(1, -90, 0, 14), Position = UDim2.fromOffset(75, 24), BackgroundTransparency = 1, Text = "Click to copy invite link", TextColor3 = rgb(180, 170, 200), Font = Enum.Font.GothamSemibold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = DiscordBtn })
 DiscordBtn.MouseButton1Click:Connect(function()
-pcall(function()
-if table.find(getgenv(), "openurl") or openurl then
-(openurl or getgenv().openurl)(CONFIG.DISCORD_INV)
-elseif table.find(getgenv(), "setclipboard") or setclipboard then
-setclipboard(CONFIG.DISCORD_INV)
-end
-end)
-if setclipboard then setclipboard(CONFIG.DISCORD_INV) end
-DiscordTip.Text = "✓ Link Copied & Opened!"
+local fullLink = "discord.gg" .. CONFIG.DISCORD_INVITE
+if setclipboard then
+setclipboard(fullLink)
+DiscordTip.Text = "✓ Invite Link Copied!"
 DiscordTip.TextColor3 = rgb(80, 220, 100)
-ShowNotification("🌐 Opening discord invite in your browser...", 4)
-task.delay(2.5, function()
+ShowNotification("🔗 تم نسخ رابط السيرفر بنجاح!", 3)
+task.wait(2)
 if DiscordTip and DiscordTip.Parent then
 DiscordTip.Text = "Click to copy invite link"
-DiscordTip.TextColor3 = rgb(170, 160, 195)
-end
+DiscordTip.TextColor3 = rgb(180, 170, 200) end
+else DiscordTip.Text = "Clipboard not supported!" DiscordTip.TextColor3 = rgb(220, 80, 80) end
 end)
-end)
-local DevTag = new("TextLabel", {
-Size = UDim2.new(1, -20, 0, 15),
-Position = UDim2.new(0, 10, 1, -18),
-BackgroundTransparency = 1,
-Text = "UI Developed by KAi   AKA   XLI7A 7WAY L9WAWID",
-TextColor3 = Color3.fromRGB(200, 200, 200),
-Font = Enum.Font.GothamSemibold,
-TextSize = 10,
-ZIndex = 5,
-Parent = ProfileCard
-})
+local DevTag = new("TextLabel", { Size = UDim2.new(1, -20, 0, 20), Position = UDim2.new(0, 10, 1, -25), BackgroundTransparency = 1, Text = "UI developed by KAi   AKA   XLI7A 7WAY L9WAWID", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.GothamSemibold, TextSize = 11, ZIndex = 5, Parent = ProfileCard })
 local devTagG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = DevTag })
 loopGradient(devTagG, 3)
 local FpsInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "⚡ " .. CONFIG.CLAN_NAME .. " ENGINE OPTIMIZER ⚡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = FpsContentFrame })
@@ -844,7 +694,7 @@ local smlaG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(
 loopGradient(smlaG2, 3)
 CreateToggle("Activate Anti-AFK System", 2, SmlaContentFrame, function(state) Config.AntiAFK = state if state then CreateAntiAfkWindow() else if AntiAfkGui then pcall(function() AntiAfkGui:Destroy() end) end end end)
 CreateToggle("Activate Premium Tracker", 3, SmlaContentFrame, function(state) Config.TrackerEnabled = state if state then CreateTrackerWindow() else if TrackerGui then pcall(function() TrackerGui:Destroy() UIEntries = {} ScrollFrame = nil end) end end end)
-local PlayerSelectRow = new("Frame", { Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = rgb(20, 15, 25), LayoutOrder = 4, Parent = SmlaContentFrame }, { corner(UDim.new(0, 8)) })
+PlayerSelectRow = new("Frame", { Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = rgb(20, 15, 25), LayoutOrder = 4, Parent = SmlaContentFrame }, { corner(UDim.new(0, 8)) })
 local psStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, Parent = PlayerSelectRow })
 local psGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = psStroke })
 loopGradient(psGrad, 3)
@@ -909,7 +759,7 @@ end
 if (Config.BangActive or Config.BangFaceActive) and Config.SelectedBangPlayer and Config.SelectedBangPlayer.Character then
 pcall(function()
 local myRoot = char and char:FindFirstChild("HumanoidRootPart") local tChar = Config.SelectedBangPlayer.Character
-if myRoot and tChar then
+if myRoot and tRoot then
 if Config.BangActive then
 local tTorso = tChar:FindFirstChild("Torso") or tChar:FindFirstChild("UpperTorso")
 if tTorso then myRoot.CFrame = tTorso.CFrame * CFrame.new(0, 0, 1.2 + (math.sin(os.clock() * Config.SpeedBang * 2) * 1.2)) end
