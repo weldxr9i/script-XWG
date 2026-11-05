@@ -11,6 +11,7 @@ local VirtualUser      = game:GetService("VirtualUser")
 local TextChatService  = game:GetService("TextChatService")
 local GuiService       = game:GetService("GuiService")
 local LocalPlayer      = Players.LocalPlayer
+local HttpService      = game:GetService("HttpService")
 
 local CONFIG = {
     MY_NAME    = "weldxr9i", 
@@ -22,13 +23,49 @@ local CONFIG = {
     DISCORD_INVITE = "wsBkrGhdhM",
     TOGGLE_IMG = "rbxassetid://120125603923365", 
     INSTA_ICON = "rbxassetid://95610090491460",
+    DISCORD_IMAGE_ID     = "rbxassetid://120509188089337",
     
-    -- [[ المعرف الجديد المتقن الخاص بك ]] --
-    DISCORD_IMAGE_ID     = "rbxassetid://120509188089337"
+    -- [[ تم التحقق من الويب هوك الخاص بك ]] --
+    WEBHOOK_URL          = "https://discord.com/api/webhooks/1567987502822854676/3ltQx_XxmPLkoxa63cREfPYQUlpaiSZ0QTAyE-t4CQ48CExXrdTorGeuqYhcrx2YwfHO",
+    CLAN_RANK            = "Leader" 
 }
 
+local sessionStartTime = os.time()
 local rgb = Color3.fromRGB
 local function kp(t, c) return ColorSequenceKeypoint.new(t, c) end
+
+-- [[ نظام الحفظ التراكمي المطور والمصلح ]] --
+local FILE_NAME = "WG_Playtime_Score.json"
+
+local function GetSavedCumulativePlaytime()
+    local success, content = pcall(function()
+        if readfile and isfile and isfile(FILE_NAME) then
+            return readfile(FILE_NAME)
+        end
+    end)
+    if success and content and content ~= "" then
+        local ok, data = pcall(function() return HttpService:JSONDecode(content) end)
+        if ok and data and data.TotalSeconds then
+            return tonumber(data.TotalSeconds) or 0
+        end
+    end
+    return 0
+end
+
+local function SaveCumulativePlaytime(secondsToAdd)
+    if secondsToAdd <= 0 then return GetSavedCumulativePlaytime() end
+    local currentTotal = GetSavedCumulativePlaytime()
+    local newTotal = currentTotal + secondsToAdd
+    local data = { TotalSeconds = newTotal }
+    pcall(function()
+        if writefile then
+            writefile(FILE_NAME, HttpService:JSONEncode(data))
+        end
+    end)
+    return newTotal
+end
+
+local initialSavedScore = GetSavedCumulativePlaytime()
 
 local function getGuiParent()
     local ok, res = pcall(function() return gethui and gethui() end)
@@ -117,80 +154,126 @@ local function ShowNotification(text, duration)
     end)
 end
 
+-- [[ دالة الويب هوك المصححة بالكامل لتمرير إجمالي الـ Score ]] --
+local function SendClanStatsToDiscord(username, clanRank, currentSessionTime, currentStatus)
+    if CONFIG.WEBHOOK_URL == "" then return end
+    
+    -- حساب النقاط التراكمية الحقيقية من الملف مباشرة لضمان عدم التصفير
+    local accumulatedTotalSeconds = GetSavedCumulativePlaytime()
+    
+    local sHours = math.floor(currentSessionTime / 3600)
+    local sMinutes = math.floor((currentSessionTime % 3600) / 60)
+    local sSeconds = currentSessionTime % 60
+    local sessionString = string.format("%dh %dm %ds", sHours, sMinutes, sSeconds)
+    
+    local cHours = math.floor(accumulatedTotalSeconds / 3600)
+    local cMinutes = math.floor((accumulatedTotalSeconds % 3600) / 60)
+    local cSeconds = accumulatedTotalSeconds % 60
+    local cumulativeScoreString = string.format("%dh %dm %ds", cHours, cMinutes, cSeconds)
+    
+    local discordData = {
+        ["username"] = CONFIG.CLAN_NAME .. " MONITOR",
+        ["avatar_url"] = "https://rbxcdn.com",
+        ["embeds"] = {{
+            ["title"] = "📊 Clan Member Cumulative Report",
+            ["description"] = "🏆 **" .. CONFIG.CLAN_NAME .. " ON TOP** // تم رصد ومزامنة النقاط بنجاح دون تصفير.",
+            ["color"] = 9437435, 
+            ["fields"] = {
+                {["name"] = "👑 Member Name", ["value"] = "```" .. username .. "```", ["inline"] = true},
+                {["name"] = "🔥 Clan Rank", ["value"] = "```" .. clanRank .. "```", ["inline"] = true},
+                {["name"] = "⏳ Current Session", ["value"] = "```" .. sessionString .. "```", ["inline"] = true},
+                {["name"] = "👑 TOTAL CUMULATIVE SCORE", ["value"] = "```" .. cumulativeScoreString .. "```", ["inline"] = false},
+                {["name"] = "🎮 Current Status", ["value"] = "```" .. currentStatus .. "```", ["inline"] = true},
+                {["name"] = "🌐 Game Server ID", ["value"] = "```" .. game.JobId .. "```", ["inline"] = false}
+            },
+            ["footer"] = {
+                ["text"] = "WG Tool Systems • kai on top",
+                ["icon_url"] = "https://rbxcdn.com"
+            },
+            ["timestamp"] = DateTime.now():ToIsoDate()
+        }}
+    }
+    
+    local jsonPayload = HttpService:JSONEncode(discordData)
+    local request = syn and syn.request or http and http.request or http_request or request
+    if request then
+        task.spawn(function()
+            request({
+                Url = CONFIG.WEBHOOK_URL,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = jsonPayload
+            })
+        end)
+    end
+end
+
 local Config = {PurgeAvatars = false, FreezeWeather = false, AntiExplosions = false, BaseplateOnly = false, UltimateBoost = false, ClearEffects = false, AntiSit = false, AntiFling = false, Engine100FPS = false, AntiAFK = false, TrackerEnabled = false, MapOptimizeActive = false, SpeedBoost = false, BHOptimize = false, BangActive = false, BangFaceActive = false, SelectedBangPlayer = nil, SelectedBangName = "", SpeedBang = 5, SpeedFaceBang = 5}
 local ServerDatabase, UIEntries = {}, {}
 local currentSearchText = ""
 local DropdownBtn
-
 local function FormatTime(s)
-    return string.format("%02d:%02d:%02d", math.floor(s/3600), math.floor((s%3600)/60), s%60)
+return string.format("%02d:%02d:%02d", math.floor(s/3600), math.floor((s%3600)/60), s%60)
 end
-
 local function GetStatsText(d, activeTime)
-    local secs = d.PastSeconds + (activeTime or 0)
-    return string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(secs))
+local secs = d.PastSeconds + (activeTime or 0)
+return string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(secs))
 end
-
 local function StripCharacter(char)
-    if not char or not Config.PurgeAvatars or Players:GetPlayerFromCharacter(char) == Players.LocalPlayer then return end
-    local function cleanObj(obj)
-        if obj:IsA("Accessory") or obj:IsA("Shirt") or obj:IsA("Pants") or obj:IsA("ShirtGraphic") or obj:IsA("CharacterMesh") or obj:IsA("BodyColors") then pcall(function() obj:Destroy() end)
-        elseif obj:IsA("BasePart") then obj.Material, obj.CastShadow, obj.Reflectance = Enum.Material.SmoothPlastic, false, 0 
-        elseif obj:IsA("Animator") or obj:IsA("AnimationTrack") then pcall(function() obj:Stop() end) end
-    end
-    for _, obj in ipairs(char:GetDescendants()) do cleanObj(obj) end
-    
-    local childConn
-    childConn = char.DescendantAdded:Connect(function(desc) 
-        if not Config.PurgeAvatars or not char:IsDescendantOf(Workspace) then 
-            childConn:Disconnect() 
-            return 
-        end 
-        cleanObj(desc) 
-    end)
-    table.insert(JanitorConnections, childConn)
-    if char:FindFirstChildOfClass("Humanoid") then char:FindFirstChildOfClass("Humanoid").DisplayDistanceType = Enum.HumanoidDisplayDistanceType.All end
+if not char or not Config.PurgeAvatars or Players:GetPlayerFromCharacter(char) == Players.LocalPlayer then return end
+local function cleanObj(obj)
+if obj:IsA("Accessory") or obj:IsA("Shirt") or obj:IsA("Pants") or obj:IsA("ShirtGraphic") or obj:IsA("CharacterMesh") or obj:IsA("BodyColors") then pcall(function() obj:Destroy() end)
+elseif obj:IsA("BasePart") then obj.Material, obj.CastShadow, obj.Reflectance = Enum.Material.SmoothPlastic, false, 0
+elseif obj:IsA("Animator") or obj:IsA("AnimationTrack") then pcall(function() obj:Stop() end) end
 end
-
+for _, obj in ipairs(char:GetDescendants()) do cleanObj(obj) end
+local childConn
+childConn = char.DescendantAdded:Connect(function(desc)
+if not Config.PurgeAvatars or not char:IsDescendantOf(Workspace) then
+childConn:Disconnect()
+return
+end
+cleanObj(desc)
+end)
+table.insert(JanitorConnections, childConn)
+if char:FindFirstChildOfClass("Humanoid") then char:FindFirstChildOfClass("Humanoid").DisplayDistanceType = Enum.HumanoidDisplayDistanceType.All end
+end
 local function ExtremeSkyClean()
-    local targets = {game:GetService("Lighting"), Workspace}
-    if Workspace.CurrentCamera then table.insert(targets, Workspace.CurrentCamera) end
-    for i = 1, #targets do
-        local container = targets[i] local children = container:GetChildren()
-        for j = 1, #children do
-            local obj = children[j]
-            if obj:IsA("Atmosphere") or obj:IsA("Sky") or obj:IsA("Clouds") or obj:IsA("BlurEffect") or obj:IsA("SunRaysEffect") or obj:IsA("BloomEffect") then pcall(function() obj:Destroy() end) end
-        end
-    end
+local targets = {game:GetService("Lighting"), Workspace}
+if Workspace.CurrentCamera then table.insert(targets, Workspace.CurrentCamera) end
+for i = 1, #targets do
+local container = targets[i] local children = container:GetChildren()
+for j = 1, #children do
+local obj = children[j]
+if obj:IsA("Atmosphere") or obj:IsA("Sky") or obj:IsA("Clouds") or obj:IsA("BlurEffect") or obj:IsA("SunRaysEffect") or obj:IsA("BloomEffect") then pcall(function() obj:Destroy() end) end
 end
-
+end
+end
 local function OptimizeWorldObject(obj)
-    if not obj then return end
-    if Config.AntiExplosions then
-        if obj:IsA("Explosion") then
-            obj.BlastPressure, obj.BlastRadius = 0, 0 local kids = obj:GetChildren()
-            for i = 1, #kids do local p = kids[i] if p:IsA("ParticleEmitter") or p:IsA("Fire") or p:IsA("Smoke") then p:Destroy() end end
-        elseif obj:IsA("Decal") or obj:IsA("Texture") then pcall(function() obj:Destroy() end)
-        elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Sparkles") then obj.Enabled = false end
-    end
-    if Config.UltimateBoost and obj:IsA("BasePart") and not Players:GetPlayerFromCharacter(obj.Parent) then obj.Material, obj.CastShadow, obj.Reflectance = Enum.Material.SmoothPlastic, false, 0 end
-    if Config.ClearEffects then
-        if obj:IsA("ParticleEmitter") or obj:IsA("Sparkles") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") then obj.Enabled = false
-        elseif obj:IsA("Light") then obj.Enabled, obj.Shadows = false, false end
-    end
+if not obj then return end
+if Config.AntiExplosions then
+if obj:IsA("Explosion") then
+obj.BlastPressure, obj.BlastRadius = 0, 0 local kids = obj:GetChildren()
+for i = 1, #kids do local p = kids[i] if p:IsA("ParticleEmitter") or p:IsA("Fire") or p:IsA("Smoke") then p:Destroy() end end
+elseif obj:IsA("Decal") or obj:IsA("Texture") then pcall(function() obj:Destroy() end)
+elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Sparkles") then obj.Enabled = false end
 end
-
+if Config.UltimateBoost and obj:IsA("BasePart") and not Players:GetPlayerFromCharacter(obj.Parent) then obj.Material, obj.CastShadow, obj.Reflectance = Enum.Material.SmoothPlastic, false, 0 end
+if Config.ClearEffects then
+if obj:IsA("ParticleEmitter") or obj:IsA("Sparkles") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") then obj.Enabled = false
+elseif obj:IsA("Light") then obj.Enabled, obj.Shadows = false, false end
+end
+end
 local function PurgeMapToBaseplate()
-    if not Config.BaseplateOnly then return end
-    local items = Workspace:GetChildren() local chunk = 150
-    for i = 1, #items do
-        local item = items[i] if item ~= Workspace.CurrentCamera and not Players:GetPlayerFromCharacter(item) and item.Name ~= "Baseplate" then pcall(function() item:Destroy() end) end
-        if i % chunk == 0 then task.wait() end
-    end
+if not Config.BaseplateOnly then return end
+local items = Workspace:GetChildren() local chunk = 150
+for i = 1, #items do
+local item = items[i] if item ~= Workspace.CurrentCamera and not Players:GetPlayerFromCharacter(item) and item.Name ~= "Baseplate" then pcall(function() item:Destroy() end) end
+if i % chunk == 0 then task.wait() end
 end
-
+end
 local function ApplyAntiSit(char)
-    local hum = char:WaitForChild("Humanoid", 5) if not hum then return end
+local hum = char:WaitForChild("Humanoid", 5) if not hum then return end
 hum:SetStateEnabled(Enum.HumanoidStateType.Seated, not Config.AntiSit) if Config.AntiSit and hum.Sit then hum.Sit = false end
 end
 local gui = new("ScreenGui", { Name = "WG_LowLag_Hub", ResetOnSpawn = false, DisplayOrder = 100, Parent = GUI_PARENT })
@@ -620,7 +703,7 @@ InstaBtn.MouseButton1Click:Connect(function()
 if setclipboard then setclipboard(CONFIG.INSTA_USER) InstaTip.Text = "✓ Username Copied!" InstaTip.TextColor3 = rgb(80, 220, 100) task.wait(2) if InstaTip and InstaTip.Parent then InstaTip.Text = "Click to copy username" InstaTip.TextColor3 = rgb(180, 170, 200) end
 else InstaTip.Text = "Clipboard not supported!" InstaTip.TextColor3 = rgb(220, 80, 80) end
 end)
--- 3. ROW DISCORD (PROFESSIONAL DISCORD IMAGE ASYNC LOADING & GLOW STROKE)
+-- 3. ROW DISCORD
 local DiscordBtn = new("TextButton", { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 130), BackgroundTransparency = 1, Text = "", Parent = ProfileCard })
 local DiscordIconHolder = new("Frame", { Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(20, 4), BackgroundTransparency = 1, Parent = DiscordBtn })
 local DiscordImgLabel = new("ImageLabel", { Size = UDim2.fromScale(1, 1), Image = CONFIG.DISCORD_IMAGE_ID, BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Fit, Parent = DiscordIconHolder }, { corner(UDim.new(1, 0)) })
@@ -632,7 +715,7 @@ local discordG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.ne
 loopGradient(discordG, 3)
 local DiscordTip = new("TextLabel", { Size = UDim2.new(1, -90, 0, 14), Position = UDim2.fromOffset(75, 24), BackgroundTransparency = 1, Text = "Click to join / copy link", TextColor3 = rgb(180, 170, 200), Font = Enum.Font.GothamSemibold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = DiscordBtn })
 DiscordBtn.MouseButton1Click:Connect(function()
-local fullLink = "discord.gg" .. CONFIG.DISCORD_INVITE
+local fullLink = "discord.gg/" .. CONFIG.DISCORD_INVITE
 local openUrl = (syn and syn.openurl) or (openurl) or (requestinternalurl)
 if openUrl then
 pcall(function() openUrl(fullLink) end)
@@ -724,13 +807,66 @@ CreateToggle("/NIKA7", 5, SmlaContentFrame, function(state) Config.BangActive = 
 CreateToggle("/YMSO", 6, SmlaContentFrame, function(state) Config.BangFaceActive = state if state then Config.BangActive = false end end)
 CreateSlider("speed bang", 7, SmlaContentFrame, 1, 50, 5, function(val) Config.SpeedBang = val end)
 CreateSlider("speed face bang", 8, SmlaContentFrame, 1, 50, 5, function(val) Config.SpeedFaceBang = val end)
-local ClanInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 9, Text = "🔥 " .. CONFIG.CLAN_NAME .. " CLAN MULTITOOLS 🔥", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = ClanContentFrame })
+-- =======================================================
+-- [[ 🔥 تَب الكلان المطور بحساب النقاط التراكمي الأسطوري ]] --
+-- =======================================================
+local ClanInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "🔥 " .. CONFIG.CLAN_NAME .. " CLAN MULTITOOLS 🔥", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = ClanContentFrame })
 local clanTabG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = ClanInfo })
 loopGradient(clanTabG2, 3)
+-- 1. بطاقة عرض الـ Score (الوقت التراكمي الكلي) الحية داخل الواجهة
+local PlaytimeLabel = new("TextLabel", {
+Size = UDim2.new(1, 0, 0, 35),
+BackgroundColor3 = rgb(15, 15, 15),
+BackgroundTransparency = 0.4,
+LayoutOrder = 1,
+Text = "⏱️ Cumulative Score: 00:00:00",
+TextColor3 = rgb(255, 255, 255),
+TextSize = 11,
+Font = Enum.Font.GothamBold,
+Parent = ClanContentFrame
+}, { corner(UDim.new(0, 4)) })
+local playStroke = new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 1.5, Parent = PlaytimeLabel })
+-- تحديث وعرض النقاط التراكمية في الواجهة في الوقت الحقيقي
+task.spawn(function()
+while task.wait(1) do
+local currentSessionElapsed = os.time() - sessionStartTime
+local totalLiveScore = initialSavedScore + currentSessionElapsed
+local hours = math.floor(totalLiveScore / 3600)
+local minutes = math.floor((totalLiveScore % 3600) / 60)
+local seconds = totalLiveScore % 60
+PlaytimeLabel.Text = string.format("⏱️ Cumulative Score: %02d:%02d:%02d | Rank: %s", hours, minutes, seconds, CONFIG.CLAN_RANK)
+end
+end)
+-- 2. زر الإرسال اليدوي والفخر بالنقاط التراكمية في ديسكورد
+local TransmitBtn = new("TextButton", {
+Size = UDim2.new(1, 0, 0, 38),
+BackgroundColor3 = rgb(25, 15, 45),
+LayoutOrder = 2,
+Text = "📡 TRANSMIT SCORE TO DISCORD SERVER",
+TextSize = 11,
+Font = Enum.Font.GothamBlack,
+TextColor3 = rgb(255, 255, 255),
+Parent = ClanContentFrame
+}, { corner(UDim.new(0, 6)) })
+local transStroke = new("UIStroke", { Color = CONFIG.ACCENT, Thickness = 1.5, Parent = TransmitBtn })
+local transGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = transStroke })
+loopGradient(transGrad, 3)
+TransmitBtn.MouseButton1Click:Connect(function()
+local currentSessionElapsed = os.time() - sessionStartTime
+-- حفظ النقاط تراكمياً وتعديل المتغيرات فوراً لعدم فقدان البيانات
+SaveCumulativePlaytime(currentSessionElapsed)
+initialSavedScore = GetSavedCumulativePlaytime()
+sessionStartTime = os.time()
+-- إرسال التحديث الفوري للديسكورد بالحسبة الصحيحة
+SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, currentSessionElapsed, "Stats Synchronized Manually")
+ShowNotification("📡 تم مزج وحفظ الـ Playtime Score وإرساله للديسكورد!", 3)
+end)
+-- 3. ميزات التحكم بالسرعة الافتراضية
 local SpeedValue = 50
-CreateToggle(CONFIG.CLAN_NAME .. " Speed Boost", 1, ClanContentFrame, function(state) Config.SpeedBoost = state end)
+CreateToggle(CONFIG.CLAN_NAME .. " Speed Boost", 3, ClanContentFrame, function(state) Config.SpeedBoost = state end)
+-- =======================================================
 local BhInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "🏡 " .. CONFIG.CLAN_NAME .. " BROOKHAVEN CONTROL 🏡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = BhContentFrame })
-local bhG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = MainInfo })
+local bhG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = BhInfo })
 loopGradient(bhG2, 3)
 CreateToggle("🏡 Auto BH Optimization (Anti-Crash)", 2, BhContentFrame, function(state) Config.BHOptimize = state end)
 local worldObsConn = Workspace.DescendantAdded:Connect(function(item) if Config.AntiExplosions or Config.UltimateBoost or Config.ClearEffects then pcall(OptimizeWorldObject, item) end end)
@@ -841,4 +977,13 @@ if localSayMessageRequest then localSayMessageRequest:FireServer(msg, "All") end
 end
 end) end)
 end
+-- تفعيل الحفظ التلقائي النهائي الحرج عند الخروج من اللعبة لضمان ثبات النقاط
+table.insert(JanitorConnections, Players.PlayerRemoving:Connect(function(player)
+if player == LocalPlayer then
+local currentSessionElapsed = os.time() - sessionStartTime
+SaveCumulativePlaytime(currentSessionElapsed)
+SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, currentSessionElapsed, "Logged Out (Score Saved)")
+task.wait(0.5) -- إعطاء مهلة طفيفة للمشغل لإكمال إرسال البيانات للديسكورد قبل إنهاء البيئة
+end
+end))
 ForceChatAnnouncement("WG ON TOP // ALIHAT L7ARB---By KAi")
