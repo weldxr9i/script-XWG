@@ -9,6 +9,7 @@ local CoreGui          = game:GetService("CoreGui")
 local Workspace        = game:GetService("Workspace")
 local VirtualUser      = game:GetService("VirtualUser")
 local TextChatService  = game:GetService("TextChatService")
+local GuiService       = game:GetService("GuiService")
 local LocalPlayer      = Players.LocalPlayer
 
 local CONFIG = {
@@ -20,7 +21,10 @@ local CONFIG = {
     INSTA_USER = "h04x_jf",
     DISCORD_INVITE = "wsBkrGhdhM",
     TOGGLE_IMG = "rbxassetid://120125603923365", 
-    INSTA_ICON = "rbxassetid://95610090491460"
+    INSTA_ICON = "rbxassetid://95610090491460",
+    
+    -- [[ المعرف الجديد المتقن الخاص بك ]] --
+    DISCORD_IMAGE_ID     = "rbxassetid://120509188089337"
 }
 
 local rgb = Color3.fromRGB
@@ -187,9 +191,8 @@ end
 
 local function ApplyAntiSit(char)
     local hum = char:WaitForChild("Humanoid", 5) if not hum then return end
-    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, not Config.AntiSit) if Config.AntiSit and hum.Sit then hum.Sit = false end
+hum:SetStateEnabled(Enum.HumanoidStateType.Seated, not Config.AntiSit) if Config.AntiSit and hum.Sit then hum.Sit = false end
 end
-
 local gui = new("ScreenGui", { Name = "WG_LowLag_Hub", ResetOnSpawn = false, DisplayOrder = 100, Parent = GUI_PARENT })
 local main = new("Frame", { Size = UDim2.fromOffset(420, 360), Position = UDim2.new(0.3, 0, 0.2, 0), BackgroundColor3 = rgb(12, 8, 22), Active = true, Parent = gui }, { corner(UDim.new(0, 16)) })
 makeDraggable(main)
@@ -569,7 +572,7 @@ end
 if ScrollFrame then CreatePlayerRow(p.Name, p.UserId) local ui = UIEntries[p.Name] if ui then ui.UpdateVisuals(true, ServerDatabase[p.Name].TrackingDisabled) end end
 if isNew then task.spawn(function() task.wait(3) local cur = ServerDatabase[p.Name] if cur and cur.IsPresent and not cur.TrackingDisabled then cur.Status = "active" end end) end
 end
-for _, p in pairs(Players:GetPlayers()) do SetupTrackerLogic(p, false) end
+for _, p in ipairs(Players:GetPlayers()) do SetupTrackerLogic(p, false) end
 local pAddConn = Players.PlayerAdded:Connect(function(p) SetupTrackerLogic(p, true) end)
 local pRemConn = Players.PlayerRemoving:Connect(function(p)
 local d, ui = ServerDatabase[p.Name], UIEntries[p.Name]
@@ -609,7 +612,8 @@ local InstaImg = new("ImageLabel", { Size = UDim2.fromOffset(42, 42), Position =
 local instaStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = InstaImg })
 local instaGFrame = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = instaStroke })
 loopGradient(instaGFrame, 3)
-local InstaName = new("TextLabel", { Size = UDim2.new(1, -90, 0, 20), Position = UDim2.fromOffset(75, 4), BackgroundTransparency = 1, Text = "Instagram: @" .. CONFIG.INSTA_USER, TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = InstaBtn })
+local InstaName = new("TextLabel", { Size = UDim2.new(1, -90, 0, 20), Position = UDim2.fromOffset(75, 4), BackgroundTransparency = 1, Text = "Instagram: @" .. CONFIG.INSTA_USER,
+TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = InstaBtn })
 local instaG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = InstaName })
 loopGradient(instaG, 3)
 local InstaTip = new("TextLabel", { Size = UDim2.new(1, -90, 0, 14), Position = UDim2.fromOffset(75, 24), BackgroundTransparency = 1, Text = "Click to copy username", TextColor3 = rgb(180, 170, 200), Font = Enum.Font.GothamSemibold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = InstaBtn })
@@ -617,39 +621,38 @@ InstaBtn.MouseButton1Click:Connect(function()
 if setclipboard then setclipboard(CONFIG.INSTA_USER) InstaTip.Text = "✓ Username Copied!" InstaTip.TextColor3 = rgb(80, 220, 100) task.wait(2) if InstaTip and InstaTip.Parent then InstaTip.Text = "Click to copy username" InstaTip.TextColor3 = rgb(180, 170, 200) end
 else InstaTip.Text = "Clipboard not supported!" InstaTip.TextColor3 = rgb(220, 80, 80) end
 end)
--- 3. ROW DISCORD (SIMULATED DYNAMICALLY WITH NO IMAGE DEPENDENCY)
+-- 3. ROW DISCORD (PROFESSIONAL DISCORD IMAGE ASYNC LOADING & GLOW STROKE)
 local DiscordBtn = new("TextButton", { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 130), BackgroundTransparency = 1, Text = "", Parent = ProfileCard })
--- الوعاء الحاضن للأيقونة المصنوعة برمجياً
-local DiscordContainer = new("Frame", { Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(20, 4), BackgroundTransparency = 1, Parent = DiscordBtn })
--- بناء أجنحة/قرون الديسكورد العليا يدوياً
-local TopEarLeft = new("Frame", { Size = UDim2.fromOffset(12, 10), Position = UDim2.fromOffset(5, 6), BackgroundColor3 = rgb(255, 255, 255), Rotation = -25, Parent = DiscordContainer }, { corner(UDim.new(0, 4)) })
-local TopEarRight = new("Frame", { Size = UDim2.fromOffset(12, 10), Position = UDim2.fromOffset(25, 6), BackgroundColor3 = rgb(255, 255, 255), Rotation = 25, Parent = DiscordContainer }, { corner(UDim.new(0, 4)) })
--- الوجه الرئيسي المنحني العريض للديسكورد
-local MainFace = new("Frame", { Size = UDim2.fromOffset(34, 22), Position = UDim2.fromOffset(4, 12), BackgroundColor3 = rgb(255, 255, 255), Parent = DiscordContainer }, { corner(UDim.new(0, 7)) })
--- إضافة عيون الديسكورد المفرغة بداخل الوجه الرئيسي
-local EyeLeft = new("Frame", { Size = UDim2.fromOffset(6, 6), Position = UDim2.fromOffset(7, 8), BackgroundColor3 = rgb(18, 14, 28), Parent = MainFace }, { corner(UDim.new(1, 0)) })
-local EyeRight = new("Frame", { Size = UDim2.fromOffset(6, 6), Position = UDim2.fromOffset(21, 8), BackgroundColor3 = rgb(18, 14, 28), Parent = MainFace }, { corner(UDim.new(1, 0)) })
--- دمج الأقسام تحت تأثير الإضاءة المتغير للكلان (Glow Effects)
-for _, element in ipairs({TopEarLeft, TopEarRight, MainFace}) do
-local elGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = element })
-loopGradient(elGrad, 3)
-end
+local DiscordIconHolder = new("Frame", { Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(20, 4), BackgroundTransparency = 1, Parent = DiscordBtn })
+local DiscordImgLabel = new("ImageLabel", { Size = UDim2.fromScale(1, 1), Image = CONFIG.DISCORD_IMAGE_ID, BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Fit, Parent = DiscordIconHolder }, { corner(UDim.new(1, 0)) })
+local imgStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = DiscordImgLabel })
+local imgGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = imgStroke })
+loopGradient(imgGrad, 3)
 local DiscordName = new("TextLabel", { Size = UDim2.new(1, -90, 0, 20), Position = UDim2.fromOffset(75, 4), BackgroundTransparency = 1, Text = "Our Clan Discord Server", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = DiscordBtn })
 local discordG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = DiscordName })
 loopGradient(discordG, 3)
-local DiscordTip = new("TextLabel", { Size = UDim2.new(1, -90, 0, 14), Position = UDim2.fromOffset(75, 24), BackgroundTransparency = 1, Text = "Click to copy invite link", TextColor3 = rgb(180, 170, 200), Font = Enum.Font.GothamSemibold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = DiscordBtn })
+local DiscordTip = new("TextLabel", { Size = UDim2.new(1, -90, 0, 14), Position = UDim2.fromOffset(75, 24), BackgroundTransparency = 1, Text = "Click to join / copy link", TextColor3 = rgb(180, 170, 200), Font = Enum.Font.GothamSemibold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = DiscordBtn })
 DiscordBtn.MouseButton1Click:Connect(function()
 local fullLink = "discord.gg" .. CONFIG.DISCORD_INVITE
+local openUrl = (syn and syn.openurl) or (openurl) or (requestinternalurl)
+if openUrl then
+pcall(function() openUrl(fullLink) end)
+elseif GuiService and GuiService.OpenBrowserWindow then
+pcall(function() GuiService:OpenBrowserWindow(fullLink) end)
+end
 if setclipboard then
 setclipboard(fullLink)
-DiscordTip.Text = "✓ Invite Link Copied!"
+DiscordTip.Text = "✓ Redirecting & Copied!"
 DiscordTip.TextColor3 = rgb(80, 220, 100)
-ShowNotification("🔗 تم نسخ رابط السيرفر بنجاح!", 3)
+ShowNotification("🔗 تم فتح المتصفح ونسخ الرابط!", 3)
 task.wait(2)
 if DiscordTip and DiscordTip.Parent then
-DiscordTip.Text = "Click to copy invite link"
-DiscordTip.TextColor3 = rgb(180, 170, 200) end
-else DiscordTip.Text = "Clipboard not supported!" DiscordTip.TextColor3 = rgb(220, 80, 80) end
+DiscordTip.Text = "Click to join / copy link"
+DiscordTip.TextColor3 = rgb(180, 170, 200)
+end
+else
+DiscordTip.Text = "Redirected! (Clipboard error)"
+end
 end)
 local DevTag = new("TextLabel", { Size = UDim2.new(1, -20, 0, 20), Position = UDim2.new(0, 10, 1, -25), BackgroundTransparency = 1, Text = "UI developed by KAi   AKA   XLI7A 7WAY L9WAWID", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.GothamSemibold, TextSize = 11, ZIndex = 5, Parent = ProfileCard })
 local devTagG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = DevTag })
@@ -728,7 +731,7 @@ loopGradient(clanTabG2, 3)
 local SpeedValue = 50
 CreateToggle(CONFIG.CLAN_NAME .. " Speed Boost", 1, ClanContentFrame, function(state) Config.SpeedBoost = state end)
 local BhInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "🏡 " .. CONFIG.CLAN_NAME .. " BROOKHAVEN CONTROL 🏡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = BhContentFrame })
-local bhG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = BhInfo })
+local bhG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = MainInfo })
 loopGradient(bhG2, 3)
 CreateToggle("🏡 Auto BH Optimization (Anti-Crash)", 2, BhContentFrame, function(state) Config.BHOptimize = state end)
 local worldObsConn = Workspace.DescendantAdded:Connect(function(item) if Config.AntiExplosions or Config.UltimateBoost or Config.ClearEffects then pcall(OptimizeWorldObject, item) end end)
@@ -759,6 +762,7 @@ end
 if (Config.BangActive or Config.BangFaceActive) and Config.SelectedBangPlayer and Config.SelectedBangPlayer.Character then
 pcall(function()
 local myRoot = char and char:FindFirstChild("HumanoidRootPart") local tChar = Config.SelectedBangPlayer.Character
+local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
 if myRoot and tRoot then
 if Config.BangActive then
 local tTorso = tChar:FindFirstChild("Torso") or tChar:FindFirstChild("UpperTorso")
