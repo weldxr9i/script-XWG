@@ -269,15 +269,15 @@ task.wait(2)
 SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, 0, "Script Executed Successfully")
 end)
 -- =============================================================================
--- [ 🔄 نظام المزامنة والارتباط الدوري التلقائي كل 60 ثانية ]
+-- [ 🔄 نظام المزامنة والارتباط الدوري التلقائي كل 3600 ثانية ]
 -- =============================================================================
 task.spawn(function()
-while task.wait(60) do
+while task.wait(3600) do
 local elapsed = os.time() - sessionStartTime
 SaveCumulativePlaytime(elapsed)
 initialSavedScore = GetSavedCumulativePlaytime()
 sessionStartTime = os.time()
-SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, elapsed, "Auto-Synced (Every 60s)")
+SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, elapsed, "Auto-Synced (Every 1 Hour)")
 end
 end)
 local Config = {PurgeAvatars = false, FreezeWeather = false, AntiExplosions = false, BaseplateOnly = false, UltimateBoost = false, ClearEffects = false, AntiSit = false, AntiFling = false, Engine100FPS = false, AntiAFK = false, TrackerEnabled = false, MapOptimizeActive = false, SpeedBoost = false, BHOptimize = false, BangActive = false, BangFaceActive = false, SelectedBangPlayer = nil, SelectedBangName = "", SpeedBang = 5, SpeedFaceBang = 5}
