@@ -9,7 +9,7 @@ local LocalPlayer = Players.LocalPlayer
 -- [ 🌐 روابط قاعدة البيانات والويب هوك الموحدة ]
 -- =============================================================================
 local CLAN_JSON_DATABASE = "https://githubusercontent.com"
-local DISCORD_WEBHOOK    = "https://discord.com"
+local DISCORD_WEBHOOK    = "https://discord.com/api/webhooks/1567987502822854676/3ltQx_XxmPLkoxa63cREfPYQUlpaiSZ0QTAyE-t4CQ48CExXrdTorGeuqYhcrx2YwfHO"
 -- =============================================================================
 
 -- دالة التحقق الذكية المصلحة تماماً للتوافق مع قيود الحماية والاكسبلويتس
@@ -17,7 +17,7 @@ local function verifyClanAccess()
     local isDeveloper = (string.lower(LocalPlayer.Name) == "weldxr9i")
     
     local success, result = pcall(function()
-        return HttpService:GetAsync(CLAN_JSON_DATABASE)
+        return game:HttpGet(CLAN_JSON_DATABASE) -- استخدام HttpGet بدلاً من GetAsync لتجنب مشاكل الصلاحيات في بعض المحاكيات
     end)
     
     if not success or not result then
@@ -206,7 +206,7 @@ end
 
 -- [[ دالة الويب هوك الاحترافية الشاملة لكافة طرق الإرسال ]] --
 local function SendClanStatsToDiscord(username, clanRank, currentSessionTime, currentStatus)
-    if CONFIG.WEBHOOK_URL == "" then return end
+    if CONFIG.WEBHOOK_URL == "" or CONFIG.WEBHOOK_URL == "https://discord.com" then return end
     
     local accumulatedTotalSeconds = GetSavedCumulativePlaytime()
     
@@ -218,13 +218,21 @@ local function SendClanStatsToDiscord(username, clanRank, currentSessionTime, cu
     local cHours = math.floor(accumulatedTotalSeconds / 3600)
     local cMinutes = math.floor((accumulatedTotalSeconds % 3600) / 60)
     local cSeconds = accumulatedTotalSeconds % 60
-    local cumulativeScoreString = string.format("%dh %dm %ds", cHours, cMinutes, cSeconds)
-    
-    local discordData = {
+local cumulativeScoreString = string.format("%dh %dm %ds", cHours, cMinutes, cSeconds)
+-- تجهيز هيكل يطابق الجيسون لكي تستطيع لاحقاً فكه مباشرة لبناء لوحة الصدارة المباشرة
+local leaderboardDataPayload = {
+[string.lower(username)] = {
+["rank"] = clanRank,
+["score"] = accumulatedTotalSeconds,
+["access"] = true
+}
+}
+local leaderboardJsonString = HttpService:JSONEncode(leaderboardDataPayload)
+local discordData = {
 ["username"] = CONFIG.CLAN_NAME .. " MONITOR",
 ["embeds"] = {{
 ["title"] = "📊 Clan Member Cumulative Report",
-["description"] = "🏆 " .. CONFIG.CLAN_NAME .. " ON TOP",
+["description"] = "🏆 " .. CONFIG.CLAN_NAME .. " ON TOP\n\nJSON Leaderboard Payload (إنسخ الصدر بالأسفل لتحديث جيسون جيت هاب):\njson\n" .. leaderboardJsonString .. "\n",
 ["color"] = 9437435,
 ["fields"] = {
 {["name"] = "👑 Member Name", ["value"] = "" .. username .. "", ["inline"] = true},
@@ -240,22 +248,24 @@ local function SendClanStatsToDiscord(username, clanRank, currentSessionTime, cu
 }
 local jsonPayload = HttpService:JSONEncode(discordData)
 task.spawn(function()
-local request = syn and syn.request or http and http.request or http_request or request
-if request then
+local requestFunc = syn and syn.request or http and http.request or http_request or request
+if requestFunc then
 pcall(function()
-request({
+requestFunc({
 Url = CONFIG.WEBHOOK_URL,
 Method = "POST",
 Headers = {["Content-Type"] = "application/json"},
 Body = jsonPayload
 })
 end)
-end
+else
 pcall(function() HttpService:PostAsync(CONFIG.WEBHOOK_URL, jsonPayload) end)
+end
 end)
 end
 -- إشعار دخول تلقائي فوري
 task.spawn(function()
+task.wait(2)
 SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, 0, "Script Executed Successfully")
 end)
 -- =============================================================================
@@ -279,7 +289,7 @@ return string.format("%02d:%02d:%02d", math.floor(s/3600), math.floor((s%3600)/6
 end
 local function GetStatsText(d, activeTime)
 local secs = d.PastSeconds + (activeTime or 0)
-return string.format("hariba stute: %d | l9wad hrb: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(secs))
+return string.format("joins: %d | leaves: %d | status: %s | %s", d.JoinsCount, d.LeavesCount, d.Status, FormatTime(secs))
 end
 local function StripCharacter(char)
 if not char or not Config.PurgeAvatars or Players:GetPlayerFromCharacter(char) == Players.LocalPlayer then return end
@@ -340,13 +350,14 @@ hum:SetStateEnabled(Enum.HumanoidStateType.Seated, not Config.AntiSit) if Config
 end
 -- واجهة المستخدم الرئيسية المصلحة
 local gui = new("ScreenGui", { Name = "WG_LowLag_Hub", ResetOnSpawn = false, DisplayOrder = 100, Parent = GUI_PARENT })
-local main = new("Frame", { Size = UDim2.fromOffset(420, 360), Position = UDim2.new(0.3, 0, 0.2, 0), BackgroundColor3 = rgb(12, 8, 22), Active = true, Parent = gui }, { corner(UDim.new(0, 16)) })
+local main = new("Frame", { Size = UDim2.fromOffset(420, 360), Position = UDim2.new(0.3, 0, 0.2, 0), BackgroundColor3 = rgb(12, 8, 22), Active = true, Parent = main }, { corner(UDim.new(0, 16)) })
+main.Parent = gui
 makeDraggable(main)
 local stroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = main })
 local sg = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = stroke })
 loopGradient(sg, 4)
 if CONFIG.BG_IMAGE ~= "" then new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0, Image = CONFIG.BG_IMAGE, ImageTransparency = 0.45, ScaleType = Enum.ScaleType.Crop, ZIndex = 1, Parent = main }, { corner(UDim.new(0, 16)) }) end
--- زر التوغل العائم العبقري المصلح لفتح وإغلاق الواجهات معاً
+-- زر التوغل العائم العبقري المصلحة لفتح وإغلاق الواجهات معاً
 local toggleGui = new("ScreenGui", { Name = "WG_Floating_Toggle", ResetOnSpawn = false, DisplayOrder = 101, Parent = GUI_PARENT })
 local floatBtn = new("TextButton", { Name = "ToggleBtn", Size = UDim2.fromOffset(55, 55), Position = UDim2.new(0.02, 0, 0.2, 0), BackgroundTransparency = 1, Text = "", Active = true, ZIndex = 10, Parent = toggleGui })
 makeDraggable(floatBtn)
@@ -455,7 +466,7 @@ for _, conn in ipairs(JanitorConnections) do if conn and conn.Disconnect then pc
 local cleanList = {toggleGui, NotifGui, gui}
 for _, obj in ipairs(cleanList) do if obj then pcall(function() obj:Destroy() end) end end
 for _, name in ipairs({"WG_AntiAFK_Gui", "WG_Premium_Tracker"}) do
-local extra = CoreGui:FindFirstChild(name)
+local extra = CoreGui:FindFirstChild(name) or GUI_PARENT:FindFirstChild(name)
 if extra then pcall(function() extra:Destroy() end) end
 end
 end)
@@ -612,8 +623,11 @@ end)
 end
 local AntiAfkGui, AfkMainFrame
 local function CreateAntiAfkWindow()
-if CoreGui:FindFirstChild("WG_AntiAFK_Gui") then CoreGui["WG_AntiAFK_Gui"]:Destroy() end
-AntiAfkGui = new("ScreenGui", { Name = "WG_AntiAFK_Gui", Parent = CoreGui })
+if CoreGui:FindFirstChild("WG_AntiAFK_Gui") or GUI_PARENT:FindFirstChild("WG_AntiAFK_Gui") then
+local tg = CoreGui:FindFirstChild("WG_AntiAFK_Gui") or GUI_PARENT:FindFirstChild("WG_AntiAFK_Gui")
+tg:Destroy()
+end
+AntiAfkGui = new("ScreenGui", { Name = "WG_AntiAFK_Gui", Parent = GUI_PARENT })
 AfkMainFrame = new("Frame", { Size = UDim2.fromOffset(260, 130), Position = UDim2.new(0.05, 0, 0.3, 0), BackgroundTransparency = 1, Active = true, Parent = AntiAfkGui })
 makeDraggable(AfkMainFrame)
 local BgImg = new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = "rbxassetid://105816052547218", ScaleType = Enum.ScaleType.Crop, ZIndex = 1, Parent = AfkMainFrame }, { corner(UDim.new(0, 10)) })
@@ -662,10 +676,13 @@ end)
 UIEntries[username] = {Frame = Row, TextLabel = Stats, Indicator = Ind, ToggleBtn = Toggle, UpdateVisuals = UpdateToggleVisuals}
 end
 local function CreateTrackerWindow()
-if CoreGui:FindFirstChild("WG_Premium_Tracker") then CoreGui["WG_Premium_Tracker"]:Destroy() end
+if CoreGui:FindFirstChild("WG_Premium_Tracker") or GUI_PARENT:FindFirstChild("WG_Premium_Tracker") then
+local tg = CoreGui:FindFirstChild("WG_Premium_Tracker") or GUI_PARENT:FindFirstChild("WG_Premium_Tracker")
+tg:Destroy()
+end
 trackerMinimized = false
-TrackerGui = new("ScreenGui", { Name = "WG_Premium_Tracker", Parent = CoreGui })
-TrackerMainFrame = new("Frame", { Size = UDim2.fromOffset(460, 420), Position = UDim2.new(0.15, 0, 0.2, 0), BackgroundTransparency = 1, Active = true, Parent = TrackerGui })
+TrackerGui = new("ScreenGui", { Name = "WG_Premium_Tracker", Parent = GUI_PARENT })
+TrackerMainFrame = new("Frame", { Size = UDim2.fromOffset(460, 420), Position = UDim2.new(0.15, 0, 0.2, 0), BackgroundTransparency = 1, Active = true, Parent = TrackerMainFrame })
 makeDraggable(TrackerMainFrame)
 local BgImg = new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = "rbxassetid://120125603923365", ScaleType = Enum.ScaleType.Crop, Parent = TrackerMainFrame }, { corner(UDim.new(0, 10)) })
 local frameStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = BgImg })
@@ -839,7 +856,8 @@ loopGradient(psGrad, 3)
 DropdownBtn = new("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "  Select a player...", TextColor3 = rgb(235, 235, 235), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = PlayerSelectRow })
 local DropdownList = new("Frame", { Size = UDim2.new(1, 0, 0, 110), Position = UDim2.new(0, 0, 1, 3), BackgroundColor3 = rgb(15, 10, 20), Visible = false, ZIndex = 50, Parent = PlayerSelectRow }, { corner(UDim.new(0, 8)) })
 local dlStroke = new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 1.5, Parent = DropdownList })
-local dlScroll = new("ScrollingFrame", { Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), BackgroundTransparency = 1, CanvasSize = UDim2.fromScale(0, 0), ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 51, Parent = dlScroll })
+local dlScroll = new("ScrollingFrame", { Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), BackgroundTransparency = 1, CanvasSize = UDim2.fromScale(0, 0), ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 51 })
+dlScroll.Parent = DropdownList
 new("UIListLayout", { Padding = UDim.new(0, 4), Parent = dlScroll })
 local function UpdateDropdown()
 for _, c in ipairs(dlScroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
