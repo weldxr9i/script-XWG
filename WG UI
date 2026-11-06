@@ -1,7 +1,60 @@
--- [[ WAR GODS CLAN MULTITOOLS - MATCHING LIBRARY GLOW SWITCHES VERSION - OPTIMIZED & FIXED ]] --
+-- [[ WAR GODS CLAN MULTITOOLS - FULL COMPLETE INTEGRATED VERSION ]] --
 if not game:IsLoaded() then game.Loaded:Wait() end
 
-local Players          = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local Players     = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- =============================================================================
+-- [ 🌐 روابط قاعدة البيانات والويب هوك الموحدة ]
+-- =============================================================================
+local CLAN_JSON_DATABASE = "https://githubusercontent.com"
+local DISCORD_WEBHOOK    = "https://discord.com"
+-- =============================================================================
+
+-- دالة التحقق الذكية المصلحة تماماً للتوافق مع قيود الحماية والاكسبلويتس
+local function verifyClanAccess()
+    local isDeveloper = (string.lower(LocalPlayer.Name) == "weldxr9i")
+    
+    local success, result = pcall(function()
+        return HttpService:GetAsync(CLAN_JSON_DATABASE)
+    end)
+    
+    if not success or not result then
+        if isDeveloper then return true, "👑 Clan Owner" else return false, "فشل الاتصال بقاعدة بيانات جيت هاب." end
+    end
+    
+    local ok, data = pcall(function() return HttpService:JSONDecode(result) end)
+    if not ok or not data then
+        if isDeveloper then return true, "👑 Clan Owner" else return false, "تنسيق ملف الـ JSON غير صحيح." end
+    end
+    
+    local playerKey = string.lower(LocalPlayer.Name)
+    for name, info in pairs(data) do
+        if string.lower(name) == playerKey then
+            if info.access == false then
+                return false, "تم تعطيل صلاحية حسابك من قبل الإدارة."
+            else
+                return true, info.rank or "👑 Clan Owner"
+            end
+        end
+    end
+    
+    if isDeveloper then return true, "👑 Clan Owner" end
+    return false, "اسم المستخدم الخاص بك غير مدرج في نظام الكلان."
+end
+
+local isAuthorized, assignedRank = verifyClanAccess()
+
+if not isAuthorized then
+    LocalPlayer:Kick("\n🛡️ [WAR GODS CLAN]\n❌ الوصول مرفوض!\nالسبب: " .. tostring(assignedRank))
+    return
+end
+
+-- =============================================================================
+-- [ 🎉 بعد نجاح التحقق: تحميل المكتبة والواجهة بالكامل ]
+-- =============================================================================
+
 local TweenService     = game:GetService("TweenService")
 local RunService       = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -10,11 +63,9 @@ local Workspace        = game:GetService("Workspace")
 local VirtualUser      = game:GetService("VirtualUser")
 local TextChatService  = game:GetService("TextChatService")
 local GuiService       = game:GetService("GuiService")
-local LocalPlayer      = Players.LocalPlayer
-local HttpService      = game:GetService("HttpService")
 
 local CONFIG = {
-    MY_NAME    = "weldxr9i", 
+    MY_NAME    = LocalPlayer.Name,           
     CLAN_NAME  = "WAR GODS",
     BG_IMAGE   = "rbxassetid://125086374911002",
     ACCENT     = Color3.fromRGB(148, 0, 211),
@@ -25,16 +76,15 @@ local CONFIG = {
     INSTA_ICON = "rbxassetid://95610090491460",
     DISCORD_IMAGE_ID     = "rbxassetid://120509188089337",
     
-    -- [[ تم التحقق من الويب هوك الخاص بك ]] --
-    WEBHOOK_URL          = "https://discord.com/api/webhooks/1567987502822854676/3ltQx_XxmPLkoxa63cREfPYQUlpaiSZ0QTAyE-t4CQ48CExXrdTorGeuqYhcrx2YwfHO",
-    CLAN_RANK            = "Leader" 
+    WEBHOOK_URL          = DISCORD_WEBHOOK,  
+    CLAN_RANK            = assignedRank      
 }
 
 local sessionStartTime = os.time()
 local rgb = Color3.fromRGB
 local function kp(t, c) return ColorSequenceKeypoint.new(t, c) end
 
--- [[ نظام الحفظ التراكمي المطور والمصلح ]] --
+-- [[ نظام الحفظ التراكمي المطور ]] --
 local FILE_NAME = "WG_Playtime_Score.json"
 
 local function GetSavedCumulativePlaytime()
@@ -154,11 +204,10 @@ local function ShowNotification(text, duration)
     end)
 end
 
--- [[ دالة الويب هوك المصححة بالكامل لتمرير إجمالي الـ Score ]] --
+-- [[ دالة الويب هوك الاحترافية الشاملة لكافة طرق الإرسال ]] --
 local function SendClanStatsToDiscord(username, clanRank, currentSessionTime, currentStatus)
     if CONFIG.WEBHOOK_URL == "" then return end
     
-    -- حساب النقاط التراكمية الحقيقية من الملف مباشرة لضمان عدم التصفير
     local accumulatedTotalSeconds = GetSavedCumulativePlaytime()
     
     local sHours = math.floor(currentSessionTime / 3600)
@@ -172,42 +221,55 @@ local function SendClanStatsToDiscord(username, clanRank, currentSessionTime, cu
     local cumulativeScoreString = string.format("%dh %dm %ds", cHours, cMinutes, cSeconds)
     
     local discordData = {
-        ["username"] = CONFIG.CLAN_NAME .. " MONITOR",
-        ["avatar_url"] = "https://rbxcdn.com",
-        ["embeds"] = {{
-            ["title"] = "📊 Clan Member Cumulative Report",
-            ["description"] = "🏆 **" .. CONFIG.CLAN_NAME .. " ON TOP** // تم رصد ومزامنة النقاط بنجاح دون تصفير.",
-            ["color"] = 9437435, 
-            ["fields"] = {
-                {["name"] = "👑 Member Name", ["value"] = "```" .. username .. "```", ["inline"] = true},
-                {["name"] = "🔥 Clan Rank", ["value"] = "```" .. clanRank .. "```", ["inline"] = true},
-                {["name"] = "⏳ Current Session", ["value"] = "```" .. sessionString .. "```", ["inline"] = true},
-                {["name"] = "👑 TOTAL CUMULATIVE SCORE", ["value"] = "```" .. cumulativeScoreString .. "```", ["inline"] = false},
-                {["name"] = "🎮 Current Status", ["value"] = "```" .. currentStatus .. "```", ["inline"] = true},
-                {["name"] = "🌐 Game Server ID", ["value"] = "```" .. game.JobId .. "```", ["inline"] = false}
-            },
-            ["footer"] = {
-                ["text"] = "WG Tool Systems • kai on top",
-                ["icon_url"] = "https://rbxcdn.com"
-            },
-            ["timestamp"] = DateTime.now():ToIsoDate()
-        }}
-    }
-    
-    local jsonPayload = HttpService:JSONEncode(discordData)
-    local request = syn and syn.request or http and http.request or http_request or request
-    if request then
-        task.spawn(function()
-            request({
-                Url = CONFIG.WEBHOOK_URL,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = jsonPayload
-            })
-        end)
-    end
+["username"] = CONFIG.CLAN_NAME .. " MONITOR",
+["embeds"] = {{
+["title"] = "📊 Clan Member Cumulative Report",
+["description"] = "🏆 " .. CONFIG.CLAN_NAME .. " ON TOP",
+["color"] = 9437435,
+["fields"] = {
+{["name"] = "👑 Member Name", ["value"] = "" .. username .. "", ["inline"] = true},
+{["name"] = "🔥 Clan Rank", ["value"] = "" .. clanRank .. "", ["inline"] = true},
+{["name"] = "⏳ Current Session", ["value"] = "" .. sessionString .. "", ["inline"] = true},
+{["name"] = "👑 TOTAL CUMULATIVE SCORE", ["value"] = "" .. cumulativeScoreString .. "", ["inline"] = false},
+{["name"] = "🎮 Current Status", ["value"] = "" .. currentStatus .. "", ["inline"] = true},
+{["name"] = "🌐 Game Server ID", ["value"] = "" .. game.JobId .. "", ["inline"] = false}
+},
+["footer"] = { ["text"] = "WG Tool Systems • kai on top" },
+["timestamp"] = DateTime.now():ToIsoDate()
+}}
+}
+local jsonPayload = HttpService:JSONEncode(discordData)
+task.spawn(function()
+local request = syn and syn.request or http and http.request or http_request or request
+if request then
+pcall(function()
+request({
+Url = CONFIG.WEBHOOK_URL,
+Method = "POST",
+Headers = {["Content-Type"] = "application/json"},
+Body = jsonPayload
+})
+end)
 end
-
+pcall(function() HttpService:PostAsync(CONFIG.WEBHOOK_URL, jsonPayload) end)
+end)
+end
+-- إشعار دخول تلقائي فوري
+task.spawn(function()
+SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, 0, "Script Executed Successfully")
+end)
+-- =============================================================================
+-- [ 🔄 نظام المزامنة والارتباط الدوري التلقائي كل 60 ثانية ]
+-- =============================================================================
+task.spawn(function()
+while task.wait(60) do
+local elapsed = os.time() - sessionStartTime
+SaveCumulativePlaytime(elapsed)
+initialSavedScore = GetSavedCumulativePlaytime()
+sessionStartTime = os.time()
+SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, elapsed, "Auto-Synced (Every 60s)")
+end
+end)
 local Config = {PurgeAvatars = false, FreezeWeather = false, AntiExplosions = false, BaseplateOnly = false, UltimateBoost = false, ClearEffects = false, AntiSit = false, AntiFling = false, Engine100FPS = false, AntiAFK = false, TrackerEnabled = false, MapOptimizeActive = false, SpeedBoost = false, BHOptimize = false, BangActive = false, BangFaceActive = false, SelectedBangPlayer = nil, SelectedBangName = "", SpeedBang = 5, SpeedFaceBang = 5}
 local ServerDatabase, UIEntries = {}, {}
 local currentSearchText = ""
@@ -276,6 +338,7 @@ local function ApplyAntiSit(char)
 local hum = char:WaitForChild("Humanoid", 5) if not hum then return end
 hum:SetStateEnabled(Enum.HumanoidStateType.Seated, not Config.AntiSit) if Config.AntiSit and hum.Sit then hum.Sit = false end
 end
+-- واجهة المستخدم الرئيسية المصلحة
 local gui = new("ScreenGui", { Name = "WG_LowLag_Hub", ResetOnSpawn = false, DisplayOrder = 100, Parent = GUI_PARENT })
 local main = new("Frame", { Size = UDim2.fromOffset(420, 360), Position = UDim2.new(0.3, 0, 0.2, 0), BackgroundColor3 = rgb(12, 8, 22), Active = true, Parent = gui }, { corner(UDim.new(0, 16)) })
 makeDraggable(main)
@@ -283,6 +346,7 @@ local stroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Par
 local sg = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = stroke })
 loopGradient(sg, 4)
 if CONFIG.BG_IMAGE ~= "" then new("ImageLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 0, Image = CONFIG.BG_IMAGE, ImageTransparency = 0.45, ScaleType = Enum.ScaleType.Crop, ZIndex = 1, Parent = main }, { corner(UDim.new(0, 16)) }) end
+-- زر التوغل العائم العبقري المصلح لفتح وإغلاق الواجهات معاً
 local toggleGui = new("ScreenGui", { Name = "WG_Floating_Toggle", ResetOnSpawn = false, DisplayOrder = 101, Parent = GUI_PARENT })
 local floatBtn = new("TextButton", { Name = "ToggleBtn", Size = UDim2.fromOffset(55, 55), Position = UDim2.new(0.02, 0, 0.2, 0), BackgroundTransparency = 1, Text = "", Active = true, ZIndex = 10, Parent = toggleGui })
 makeDraggable(floatBtn)
@@ -366,9 +430,9 @@ table.insert(JanitorConnections, rotConn)
 end)
 floatBtn.MouseButton1Click:Connect(function()
 main.Visible = not main.Visible
-local frames = {"WG_AntiAFK_Gui", "WG_Premium_Tracker"}
-for _, fName in ipairs(frames) do
-local tGui = CoreGui:FindFirstChild(fName)
+local extraGuis = {"WG_AntiAFK_Gui", "WG_Premium_Tracker"}
+for _, fName in ipairs(extraGuis) do
+local tGui = CoreGui:FindFirstChild(fName) or GUI_PARENT:FindFirstChild(fName)
 local tFrame = tGui and tGui:FindFirstChildOfClass("Frame")
 if tFrame then tFrame.Visible = main.Visible end
 end
@@ -680,7 +744,6 @@ local ProfileCard = new("Frame", { Size = UDim2.new(1, 0, 0, 240), BackgroundCol
 local cardStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ProfileCard })
 local cardG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = cardStroke })
 loopGradient(cardG, 4)
--- 1. ROW ROBLOX
 local RobloxImg = new("ImageLabel", { Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(20, 15), BackgroundColor3 = rgb(25, 20, 35), Parent = ProfileCard }, { corner(UDim.new(1, 0)) })
 local robloxStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = RobloxImg })
 local robloxG = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = robloxStroke })
@@ -689,7 +752,6 @@ task.spawn(function() pcall(function() local targetId = Players:GetUserIdFromNam
 local RobloxName = new("TextLabel", { Size = UDim2.new(1, -90, 0, 42), Position = UDim2.fromOffset(75, 15), BackgroundTransparency = 1, Text = "Roblox: " .. CONFIG.MY_NAME, TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = ProfileCard })
 local robloxTextG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = RobloxName })
 loopGradient(robloxTextG, 3)
--- 2. ROW INSTAGRAM
 local InstaBtn = new("TextButton", { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 70), BackgroundTransparency = 1, Text = "", Parent = ProfileCard })
 local InstaImg = new("ImageLabel", { Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(20, 4), Image = CONFIG.INSTA_ICON, BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop, Parent = InstaBtn }, { corner(UDim.new(1, 0)) })
 local instaStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = InstaImg })
@@ -703,7 +765,6 @@ InstaBtn.MouseButton1Click:Connect(function()
 if setclipboard then setclipboard(CONFIG.INSTA_USER) InstaTip.Text = "✓ Username Copied!" InstaTip.TextColor3 = rgb(80, 220, 100) task.wait(2) if InstaTip and InstaTip.Parent then InstaTip.Text = "Click to copy username" InstaTip.TextColor3 = rgb(180, 170, 200) end
 else InstaTip.Text = "Clipboard not supported!" InstaTip.TextColor3 = rgb(220, 80, 80) end
 end)
--- 3. ROW DISCORD
 local DiscordBtn = new("TextButton", { Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 130), BackgroundTransparency = 1, Text = "", Parent = ProfileCard })
 local DiscordIconHolder = new("Frame", { Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(20, 4), BackgroundTransparency = 1, Parent = DiscordBtn })
 local DiscordImgLabel = new("ImageLabel", { Size = UDim2.fromScale(1, 1), Image = CONFIG.DISCORD_IMAGE_ID, BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Fit, Parent = DiscordIconHolder }, { corner(UDim.new(1, 0)) })
@@ -717,24 +778,16 @@ local DiscordTip = new("TextLabel", { Size = UDim2.new(1, -90, 0, 14), Position 
 DiscordBtn.MouseButton1Click:Connect(function()
 local fullLink = "discord.gg/" .. CONFIG.DISCORD_INVITE
 local openUrl = (syn and syn.openurl) or (openurl) or (requestinternalurl)
-if openUrl then
-pcall(function() openUrl(fullLink) end)
-elseif GuiService and GuiService.OpenBrowserWindow then
-pcall(function() GuiService:OpenBrowserWindow(fullLink) end)
-end
+if openUrl then pcall(function() openUrl(fullLink) end)
+elseif GuiService and GuiService.OpenBrowserWindow then pcall(function() GuiService:OpenBrowserWindow(fullLink) end) end
 if setclipboard then
 setclipboard(fullLink)
 DiscordTip.Text = "✓ Redirecting & Copied!"
 DiscordTip.TextColor3 = rgb(80, 220, 100)
 ShowNotification("🔗 تم فتح المتصفح ونسخ الرابط!", 3)
 task.wait(2)
-if DiscordTip and DiscordTip.Parent then
-DiscordTip.Text = "Click to join / copy link"
-DiscordTip.TextColor3 = rgb(180, 170, 200)
-end
-else
-DiscordTip.Text = "Redirected! (Clipboard error)"
-end
+if DiscordTip and DiscordTip.Parent then DiscordTip.Text = "Click to join / copy link" DiscordTip.TextColor3 = rgb(180, 170, 200) end
+else DiscordTip.Text = "Redirected! (Clipboard error)" end
 end)
 local DevTag = new("TextLabel", { Size = UDim2.new(1, -20, 0, 20), Position = UDim2.new(0, 10, 1, -25), BackgroundTransparency = 1, Text = "ui devloped by kai AKA zlal dsmla", TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.GothamSemibold, TextSize = 11, ZIndex = 5, Parent = ProfileCard })
 local devTagG = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = DevTag })
@@ -786,7 +839,7 @@ loopGradient(psGrad, 3)
 DropdownBtn = new("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "  Select a player...", TextColor3 = rgb(235, 235, 235), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = PlayerSelectRow })
 local DropdownList = new("Frame", { Size = UDim2.new(1, 0, 0, 110), Position = UDim2.new(0, 0, 1, 3), BackgroundColor3 = rgb(15, 10, 20), Visible = false, ZIndex = 50, Parent = PlayerSelectRow }, { corner(UDim.new(0, 8)) })
 local dlStroke = new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 1.5, Parent = DropdownList })
-local dlScroll = new("ScrollingFrame", { Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), BackgroundTransparency = 1, CanvasSize = UDim2.fromScale(0, 0), ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 51, Parent = DropdownList })
+local dlScroll = new("ScrollingFrame", { Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), BackgroundTransparency = 1, CanvasSize = UDim2.fromScale(0, 0), ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 51, Parent = dlScroll })
 new("UIListLayout", { Padding = UDim.new(0, 4), Parent = dlScroll })
 local function UpdateDropdown()
 for _, c in ipairs(dlScroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
@@ -808,25 +861,13 @@ CreateToggle("/YMSO", 6, SmlaContentFrame, function(state) Config.BangFaceActive
 CreateSlider("speed bang", 7, SmlaContentFrame, 1, 50, 5, function(val) Config.SpeedBang = val end)
 CreateSlider("speed face bang", 8, SmlaContentFrame, 1, 50, 5, function(val) Config.SpeedFaceBang = val end)
 -- =======================================================
--- [[ 🔥 تَب الكلان المطور بحساب النقاط التراكمي الأسطوري ]] --
+-- [[ 🔥 تَب الكلان بحساب النقاط التراكمي المباشر ]] --
 -- =======================================================
 local ClanInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 0, Text = "🔥 " .. CONFIG.CLAN_NAME .. " CLAN MULTITOOLS 🔥", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = ClanContentFrame })
 local clanTabG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = ClanInfo })
 loopGradient(clanTabG2, 3)
--- 1. بطاقة عرض الـ Score (الوقت التراكمي الكلي) الحية داخل الواجهة
-local PlaytimeLabel = new("TextLabel", {
-Size = UDim2.new(1, 0, 0, 35),
-BackgroundColor3 = rgb(15, 15, 15),
-BackgroundTransparency = 0.4,
-LayoutOrder = 1,
-Text = "⏱️ Cumulative Score: 00:00:00",
-TextColor3 = rgb(255, 255, 255),
-TextSize = 11,
-Font = Enum.Font.GothamBold,
-Parent = ClanContentFrame
-}, { corner(UDim.new(0, 4)) })
+local PlaytimeLabel = new("TextLabel", { Size = UDim2.new(1, 0, 0, 35), BackgroundColor3 = rgb(15, 15, 15), BackgroundTransparency = 0.4, LayoutOrder = 1, Text = "⏱️ Cumulative Score: 00:00:00", TextColor3 = rgb(255, 255, 255), TextSize = 11, Font = Enum.Font.GothamBold, Parent = ClanContentFrame }, { corner(UDim.new(0, 4)) })
 local playStroke = new("UIStroke", { Color = CONFIG.ACCENT_2, Thickness = 1.5, Parent = PlaytimeLabel })
--- تحديث وعرض النقاط التراكمية في الواجهة في الوقت الحقيقي
 task.spawn(function()
 while task.wait(1) do
 local currentSessionElapsed = os.time() - sessionStartTime
@@ -837,34 +878,20 @@ local seconds = totalLiveScore % 60
 PlaytimeLabel.Text = string.format("⏱️ Cumulative Score: %02d:%02d:%02d | Rank: %s", hours, minutes, seconds, CONFIG.CLAN_RANK)
 end
 end)
--- 2. زر الإرسال اليدوي والفخر بالنقاط التراكمية في ديسكورد
-local TransmitBtn = new("TextButton", {
-Size = UDim2.new(1, 0, 0, 38),
-BackgroundColor3 = rgb(25, 15, 45),
-LayoutOrder = 2,
-Text = "📡 TRANSMIT SCORE TO DISCORD SERVER",
-TextSize = 11,
-Font = Enum.Font.GothamBlack,
-TextColor3 = rgb(255, 255, 255),
-Parent = ClanContentFrame
-}, { corner(UDim.new(0, 6)) })
+local TransmitBtn = new("TextButton", { Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = rgb(25, 15, 45), LayoutOrder = 2, Text = "📡 TRANSMIT SCORE TO DISCORD SERVER", TextSize = 11, Font = Enum.Font.GothamBlack, TextColor3 = rgb(255, 255, 255), Parent = ClanContentFrame }, { corner(UDim.new(0, 6)) })
 local transStroke = new("UIStroke", { Color = CONFIG.ACCENT, Thickness = 1.5, Parent = TransmitBtn })
 local transGrad = new("UIGradient", { Color = ColorSequence.new({ kp(0, CONFIG.ACCENT), kp(0.5, CONFIG.ACCENT_2), kp(1, CONFIG.ACCENT) }), Parent = transStroke })
 loopGradient(transGrad, 3)
 TransmitBtn.MouseButton1Click:Connect(function()
 local currentSessionElapsed = os.time() - sessionStartTime
--- حفظ النقاط تراكمياً وتعديل المتغيرات فوراً لعدم فقدان البيانات
 SaveCumulativePlaytime(currentSessionElapsed)
 initialSavedScore = GetSavedCumulativePlaytime()
 sessionStartTime = os.time()
--- إرسال التحديث الفوري للديسكورد بالحسبة الصحيحة
 SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, currentSessionElapsed, "Stats Synchronized Manually")
 ShowNotification("📡 تم مزج وحفظ الـ Playtime Score وإرساله للديسكورد!", 3)
 end)
--- 3. ميزات التحكم بالسرعة الافتراضية
 local SpeedValue = 50
 CreateToggle(CONFIG.CLAN_NAME .. " Speed Boost", 3, ClanContentFrame, function(state) Config.SpeedBoost = state end)
--- =======================================================
 local BhInfo = new("TextLabel", { Size = UDim2.new(1, 0, 0, 25), BackgroundTransparency = 1, LayoutOrder = 1, Text = "🏡 " .. CONFIG.CLAN_NAME .. " BROOKHAVEN CONTROL 🏡", TextColor3 = rgb(255, 255, 255), TextSize = 12, Font = Enum.Font.GothamBlack, Parent = BhContentFrame })
 local bhG2 = new("UIGradient", { Color = ColorSequence.new({ kp(0, Color3.new(1, 1, 1)), kp(0.5, CONFIG.ACCENT_2), kp(1, Color3.new(1, 1, 1)) }), Parent = BhInfo })
 loopGradient(bhG2, 3)
@@ -879,9 +906,7 @@ task.spawn(function()
 while true do task.wait(1)
 if Config.TrackerEnabled and ScrollFrame then
 for name, d in pairs(ServerDatabase) do local ui = UIEntries[name]
-if ui and d.IsPresent and not d.TrackingDisabled then
-ui.TextLabel.Text = GetStatsText(d, os.time() - d.TimeJoined)
-end
+if ui and d.IsPresent and not d.TrackingDisabled then ui.TextLabel.Text = GetStatsText(d, os.time() - d.TimeJoined) end
 end
 end
 end
@@ -896,16 +921,10 @@ pcall(function() local root = char and char:FindFirstChild("HumanoidRootPart") i
 end
 if (Config.BangActive or Config.BangFaceActive) and Config.SelectedBangPlayer and Config.SelectedBangPlayer.Character then
 pcall(function()
-local myRoot = char and char:FindFirstChild("HumanoidRootPart") local tChar = Config.SelectedBangPlayer.Character
-local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
+local myRoot = char and char:FindFirstChild("HumanoidRootPart") local tChar = Config.SelectedBangPlayer.Character local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
 if myRoot and tRoot then
-if Config.BangActive then
-local tTorso = tChar:FindFirstChild("Torso") or tChar:FindFirstChild("UpperTorso")
-if tTorso then myRoot.CFrame = tTorso.CFrame * CFrame.new(0, 0, 1.2 + (math.sin(os.clock() * Config.SpeedBang * 2) * 1.2)) end
-elseif Config.BangFaceActive then
-local tHead = tChar:FindFirstChild("Head")
-if tHead then myRoot.CFrame = tHead.CFrame * CFrame.new(0, 0, -1.2 - (math.sin(os.clock() * Config.SpeedFaceBang * 2) * 1.2)) * CFrame.Angles(0, math.pi, 0) end
-end
+if Config.BangActive then local tTorso = tChar:FindFirstChild("Torso") or tChar:FindFirstChild("UpperTorso") if tTorso then myRoot.CFrame = tTorso.CFrame * CFrame.new(0, 0, 1.2 + (math.sin(os.clock() * Config.SpeedBang * 2) * 1.2)) end
+elseif Config.BangFaceActive then local tHead = tChar:FindFirstChild("Head") if tHead then myRoot.CFrame = tHead.CFrame * CFrame.new(0, 0, -1.2 - (math.sin(os.clock() * Config.SpeedFaceBang * 2) * 1.2)) * CFrame.Angles(0, math.pi, 0) end end
 end
 end)
 end
@@ -915,45 +934,13 @@ task.spawn(function()
 while true do task.wait(5)
 local char = LocalPlayer.Character local root = char and char:FindFirstChild("HumanoidRootPart")
 if Config.AntiFling and root then
-pcall(function()
-root.RotVelocity = Vector3.new(0, 0, 0)
-for _, p in ipairs(Players:GetPlayers()) do
-if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-local pRoot = p.Character.HumanoidRootPart
-if (pRoot.Position - root.Position).Magnitude < 15 then
-for _, part in ipairs(p.Character:GetChildren()) do
-if part:IsA("BasePart") then
-part.CanCollide = false
-if part:IsA("Part") or part:IsA("MeshPart") then part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0) end
-end
-end
-end
-end
-end
-end)
+pcall(function() root.RotVelocity = Vector3.new(0, 0, 0) for _, p in ipairs(Players:GetPlayers()) do if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then local pRoot = p.Character.HumanoidRootPart if (pRoot.Position - root.Position).Magnitude < 15 then for _, part in ipairs(p.Character:GetChildren()) do if part:IsA("BasePart") then part.CanCollide = false if part:IsA("Part") or part:IsA("MeshPart") then part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0) end end end end end end end)
 end
 if Config.BHOptimize and root then
-pcall(function()
-local des = Workspace:GetDescendants() local chunk = 150
-for i = 1, #des do local item = des[i]
-if item:IsA("BasePart") and not Players:GetPlayerFromCharacter(item.Parent) and item.Name ~= "Baseplate" then
-if (item.Position - root.Position).Magnitude > 80 then item.Velocity, item.RotVelocity = Vector3.new(0,0,0), Vector3.new(0,0,0) end
-elseif item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") then
-if item.Parent and item.Parent:IsA("Workspace") then pcall(function() item:Destroy() end) end
-end
-if i % chunk == 0 then task.wait() end
-end
-end)
+pcall(function() local des = Workspace:GetDescendants() local chunk = 150 for i = 1, #des do local item = des[i] if item:IsA("BasePart") and not Players:GetPlayerFromCharacter(item.Parent) and item.Name ~= "Baseplate" then if (item.Position - root.Position).Magnitude > 80 then item.Velocity, item.RotVelocity = Vector3.new(0,0,0), Vector3.new(0,0,0) end elseif item:IsA("Shirt") or item:IsA("Pants") or item:IsA("Accessory") then if item.Parent and item.Parent:IsA("Workspace") then pcall(function() item:Destroy() end) end end if i % chunk == 0 then task.wait() end end end)
 end
 if Config.MapOptimizeActive then
-pcall(function()
-if gcinfo then pcall(gcinfo) end
-local des = Workspace:GetDescendants() local chunk = 150
-for i = 1, #des do local item = des[i]
-if item:IsA("Debris") or item.Name == "Effect" or item.Name == "Bullet" or item.Name == "Laser" then pcall(function() item:Destroy() end) end
-if i % chunk == 0 then task.wait() end
-end
-end)
+pcall(function() if gcinfo then pcall(gcinfo) end local des = Workspace:GetDescendants() local chunk = 150 for i = 1, #des do local item = des[i] if item:IsA("Debris") or item.Name == "Effect" or item.Name == "Bullet" or item.Name == "Laser" then pcall(function() item:Destroy() end) end if i % chunk == 0 then task.wait() end end end)
 end
 end
 end)
@@ -968,22 +955,17 @@ end)
 table.insert(JanitorConnections, inputConn)
 local function ForceChatAnnouncement(msg)
 task.spawn(function() pcall(function()
-if TextChatService and TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-local textChannel = TextChatService:FindFirstChild("TextChannels") and TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-if textChannel then textChannel:SendAsync(msg) end
-else
-local localSayMessageRequest = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents") and game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
-if localSayMessageRequest then localSayMessageRequest:FireServer(msg, "All") end
-end
+if TextChatService and TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then local textChannel = TextChatService:FindFirstChild("TextChannels") and TextChatService.TextChannels:FindFirstChild("RBXGeneral") if textChannel then textChannel:SendAsync(msg) end
+else local localSayMessageRequest = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents") and game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest") if localSayMessageRequest then localSayMessageRequest:FireServer(msg, "All") end end
 end) end)
 end
--- تفعيل الحفظ التلقائي النهائي الحرج عند الخروج من اللعبة لضمان ثبات النقاط
 table.insert(JanitorConnections, Players.PlayerRemoving:Connect(function(player)
 if player == LocalPlayer then
 local currentSessionElapsed = os.time() - sessionStartTime
 SaveCumulativePlaytime(currentSessionElapsed)
-SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, currentSessionElapsed, "Logged Out (Score Saved)")
-task.wait(0.5) -- إعطاء مهلة طفيفة للمشغل لإكمال إرسال البيانات للديسكورد قبل إنهاء البيئة
+SendClanStatsToDiscord(LocalPlayer.Name, CONFIG.CLAN_RANK, currentSessionElapsed, "Logged Out Safely")
+task.wait(1.5)
 end
 end))
 ForceChatAnnouncement("WG ON TOP // ALIHAT L7ARB---By KAi")
+print("👑 WAR GODS CLAN SKRIPT LOADED SUCCESSFULLY!")
